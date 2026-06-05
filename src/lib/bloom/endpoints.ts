@@ -4,22 +4,19 @@
 // Every path the app hits lives here so that if Bloom's routes differ from
 // what's assumed below, there is exactly ONE place to fix it.
 //
-// Confirmed from Bloom's docs
-// (https://help.bloomgrowth.com/en/all-about-the-bloom-growth-api):
+// Verified against a live account (2026-06):
 //
-//   • Auth:  POST https://app.bloomgrowth.com/Token   (form-encoded body)
-//   • "My items" reads use a `/user/mine` suffix, e.g.
-//       GET /api/v1/scorecard/user/mine
+//   • Auth:                 POST /Token                       (form-encoded)
+//   • Current user:         GET  /api/v1/users/mine           → 200
+//   • My rocks:             GET  /api/v1/rocks/user/mine      → 200 (array)
+//   • A rock's milestones:  GET  /api/v1/rocks/{id}/milestones → 200 (array)
+//   • My to-dos:            GET  /api/v1/todos/user/mine      → 200
+//   • My issues (IDS):      GET  /api/v1/issues/user/mine     → 200
 //
-// The resource paths below follow that same `/api/v1/<resource>/user/mine`
-// convention. They should be verified against the live Swagger
-// (https://app.bloomgrowth.com/swagger/index.html) with your token, but the
-// `/user/mine` shape is taken straight from the documented metrics example.
-//
-// NOTE on milestones: in Bloom, milestones live *inside* rocks, so there is no
-// top-level milestones list — they're extracted from each rock's payload (see
-// service.ts / transform.ts). The per-milestone path here is only used for the
-// completion toggle (PUT).
+// Milestones do NOT come embedded in the rocks list — they're fetched per rock
+// from the path above (see service.ts). The milestone completion field on read
+// is a string `Status` ("Done"); the write contract for toggling it is the one
+// piece still being confirmed (see setMilestoneComplete in service.ts).
 // ─────────────────────────────────────────────────────────────────────────
 
 export const BLOOM_BASE_URL =
@@ -33,11 +30,15 @@ export const endpoints = {
   /** The authenticated user. */
   me: "/api/v1/users/mine",
 
-  /** The current user's quarterly priorities (milestones come embedded). */
+  /** The current user's quarterly priorities. */
   myRocks: "/api/v1/rocks/user/mine",
   rock: (id: string) => `/api/v1/rocks/${id}`,
 
-  /** Milestone completion toggle. Milestones are read via their parent rock. */
+  /** A rock's milestones (the only place milestones are listed). */
+  milestonesForRock: (rockId: string) =>
+    `/api/v1/rocks/${rockId}/milestones`,
+
+  /** Milestone completion toggle. */
   milestone: (id: string) => `/api/v1/milestones/${id}`,
 
   /** The current user's action items. */

@@ -94,23 +94,31 @@ src/
 └─ components/                  BoardApp, Board, Column, MilestoneCard, …
 ```
 
-### ⚠️ A note on API endpoint paths
+### API endpoints (verified against a live account, 2026-06)
 
-Bloom's Swagger requires a token to inspect. From the public docs we know:
+| What | Method & path |
+| --- | --- |
+| Auth | `POST /Token` (form-encoded) |
+| Current user | `GET /api/v1/users/mine` |
+| My rocks | `GET /api/v1/rocks/user/mine` |
+| A rock's milestones | `GET /api/v1/rocks/{rockId}/milestones` |
+| My to-dos | `GET /api/v1/todos/user/mine` |
+| My issues (IDS) | `GET /api/v1/issues/user/mine` |
 
-- Auth is `POST /Token` with a form-encoded body.
-- "My items" reads use a `/user/mine` suffix — the documented metrics example
-  is `GET /api/v1/scorecard/user/mine`.
-- **Milestones live inside rocks**, so BloomBoard reads
-  `GET /api/v1/rocks/user/mine` and extracts the embedded milestones rather
-  than hitting a (non-existent) top-level milestones list.
+Notes from the live payloads:
 
-The resource paths in [`src/lib/bloom/endpoints.ts`](src/lib/bloom/endpoints.ts)
-follow that documented `/api/v1/<resource>/user/mine` convention but **should
-still be verified against your account's Swagger**
-(`https://app.bloomgrowth.com/swagger/index.html`). Everything funnels through
-that one file, so if a path differs you only fix it in one place — the rest of
-the app uses normalized types and won't change.
+- Fields are **PascalCase** (`Id`, `Name`, `Owner`, `DueDate`); ids are numbers.
+- **Milestones are not embedded in rocks** — they're fetched per rock and
+  stamped with their parent `RockId`.
+- A milestone's completion is a **string `Status`** (`"Done"`).
+- A rock's `Completion` is a **status enum** (`2` = complete), *not* a
+  percentage — the board derives real progress % from milestone completion.
+
+All paths live in [`src/lib/bloom/endpoints.ts`](src/lib/bloom/endpoints.ts),
+and the probe scripts under [`scripts/`](scripts/) let you re-verify them:
+`test-bloom-api.sh` (read endpoints), `test-milestones.sh` (milestone
+location), and `test-milestone-write.sh` (confirms the completion-toggle write
+contract — the one piece still being finalized).
 
 ---
 

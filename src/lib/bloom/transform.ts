@@ -61,35 +61,51 @@ export function toOwner(raw: unknown): Owner | null {
 }
 
 function toRockStatus(raw: Raw): RockStatus {
-  const complete = asBool(pick(raw, "Complete", "complete", "Completed"));
-  if (complete) return "complete";
-  // Bloom encodes status a few ways: a string, or an "onTrack" boolean.
+  if (asBool(pick(raw, "Complete", "complete", "Completed"))) return "complete";
+
+  // Rocks carry a numeric `Completion` enum (verified: 2 === complete on a
+  // Complete:true rock). Treat it as a status code, not a percentage. The
+  // 0/1 mapping below is a best guess for off-track/on-track until confirmed
+  // on a non-complete rock — it only affects sidebar coloring, not the board.
+  const completion = pick(raw, "Completion", "completion");
+  if (completion !== undefined) {
+    const n = Number(completion);
+    if (n >= 2) return "complete";
+    if (n === 1) return "on-track";
+    if (n === 0) return "off-track";
+  }
+
+  // Fall back to a string status if present (e.g. "OnTrack"/"OffTrack").
   const status = asString(pick(raw, "Status", "status"))?.toLowerCase();
   if (status?.includes("off")) return "off-track";
   if (status?.includes("on")) return "on-track";
-  const onTrack = pick(raw, "OnTrack", "onTrack");
-  if (onTrack !== undefined) return asBool(onTrack) ? "on-track" : "off-track";
+  if (status?.includes("done") || status?.includes("complete")) return "complete";
   return "incomplete";
 }
 
 export function toRock(raw: Raw): Rock {
-  const completionRaw = pick<number | string>(
-    raw,
-    "Completion",
-    "completion",
-    "PercentComplete",
-    "percentComplete",
-  );
-  const completion =
-    completionRaw !== undefined ? Math.round(Number(completionRaw)) : 0;
+  const status = toRockStatus(raw);
   return {
     id: asString(pick(raw, "Id", "id"))!,
     name: asString(pick(raw, "Name", "name", "Title", "title")) ?? "Untitled",
-    status: toRockStatus(raw),
+    status,
     dueDate: asIsoDate(pick(raw, "DueDate", "dueDate", "Date")),
     owner: toOwner(pick(raw, "Owner", "owner", "User", "user")),
-    completion: Number.isFinite(completion) ? completion : 0,
+    // Real progress % is derived from milestone completion in service.ts; this
+    // is just a sensible default for rocks with no milestones.
+    completion: status === "complete" ? 100 : 0,
   };
+}
+
+/**
+ * Milestone completion is a string `Status` ("Done"). Anything that reads as
+ * done/complete counts as complete; other values (e.g. "OnTrack") do not. A
+ * `Complete`/`Done` boolean is honored too, for forward-compatibility.
+ */
+function milestoneComplete(raw: Raw): boolean {
+  const status = asString(pick(raw, "Status", "status"))?.toLowerCase();
+  if (status) return status.includes("done") || status.includes("complete");
+  return asBool(pick(raw, "Complete", "complete", "Completed", "Done"));
 }
 
 export function toMilestone(raw: Raw): Milestone {
@@ -97,7 +113,7 @@ export function toMilestone(raw: Raw): Milestone {
     id: asString(pick(raw, "Id", "id"))!,
     rockId: asString(pick(raw, "RockId", "rockId", "ParentId", "parentId")) ?? null,
     name: asString(pick(raw, "Name", "name", "Title", "title")) ?? "Untitled",
-    complete: asBool(pick(raw, "Complete", "complete", "Completed", "Done")),
+    complete: milestoneComplete(raw),
     dueDate: asIsoDate(pick(raw, "DueDate", "dueDate", "Date")),
     owner: toOwner(pick(raw, "Owner", "owner", "User", "user")),
   };
@@ -121,19 +137,6 @@ export function toIssue(raw: Raw): Issue {
     complete: asBool(pick(raw, "Complete", "complete", "Completed")),
     owner: toOwner(pick(raw, "Owner", "owner", "User", "user")),
   };
-}
-
-/**
- * Pull the milestones embedded in a raw rock payload, stamping each with its
- * parent rock's id (embedded milestones often omit their own RockId).
- */
-export function extractMilestones(rawRock: Raw): Milestone[] {
-  const rockId = asString(pick(rawRock, "Id", "id")) ?? null;
-  const list = pick(rawRock, "Milestones", "milestones");
-  return toArray(list).map((m) => {
-    const milestone = toMilestone(m);
-    return { ...milestone, rockId: milestone.rockId ?? rockId };
-  });
 }
 
 /** Bloom list endpoints sometimes wrap results in `{ items: [...] }`. */
