@@ -17,10 +17,13 @@ async function fetcher<T>(url: string): Promise<T> {
   return res.json();
 }
 
-export function useRocks() {
-  return useSWR<{ rocks: Rock[] }>("/api/rocks", fetcher);
-}
-
-export function useMilestones() {
-  return useSWR<{ milestones: Milestone[] }>("/api/milestones", fetcher);
+/**
+ * Rocks and their nested milestones in a single request — the board's primary
+ * data source.
+ */
+export function useBoard() {
+  return useSWR<{ rocks: Rock[]; milestones: Milestone[] }>(
+    "/api/board",
+    fetcher,
+  );
 }

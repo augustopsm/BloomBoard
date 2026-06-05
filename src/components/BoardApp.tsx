@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Board from "./Board";
 import Header from "./Header";
 import RockFilter from "./RockFilter";
-import { useMilestones, useRocks } from "@/hooks/useBloomData";
+import { useBoard } from "@/hooks/useBloomData";
 import {
   columnFor,
   loadOverlay,
@@ -14,13 +14,7 @@ import {
 import type { Milestone, Rock } from "@/lib/bloom/types";
 
 export default function BoardApp({ userName }: { userName: string }) {
-  const { data: rocksData, error: rocksError, isLoading: rocksLoading } = useRocks();
-  const {
-    data: msData,
-    error: msError,
-    isLoading: msLoading,
-    mutate: mutateMilestones,
-  } = useMilestones();
+  const { data, error, isLoading, mutate } = useBoard();
 
   const [overlay, setOverlay] = useState<Record<string, ColumnId>>({});
   const [activeRockIds, setActiveRockIds] = useState<Set<string> | null>(null);
@@ -29,11 +23,8 @@ export default function BoardApp({ userName }: { userName: string }) {
   // Hydrate the local stage overlay once on mount.
   useEffect(() => setOverlay(loadOverlay()), []);
 
-  const rocks: Rock[] = useMemo(() => rocksData?.rocks ?? [], [rocksData]);
-  const milestones: Milestone[] = useMemo(
-    () => msData?.milestones ?? [],
-    [msData],
-  );
+  const rocks: Rock[] = useMemo(() => data?.rocks ?? [], [data]);
+  const milestones: Milestone[] = useMemo(() => data?.milestones ?? [], [data]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -59,9 +50,10 @@ export default function BoardApp({ userName }: { userName: string }) {
     const shouldComplete = target === "complete";
     if (shouldComplete !== milestone.complete) {
       // Optimistically reflect completion in the SWR cache.
-      mutateMilestones(
+      mutate(
         (prev) =>
           prev && {
+            ...prev,
             milestones: prev.milestones.map((m) =>
               m.id === milestone.id ? { ...m, complete: shouldComplete } : m,
             ),
@@ -78,7 +70,7 @@ export default function BoardApp({ userName }: { userName: string }) {
         if (!res.ok) throw new Error();
       } catch {
         // Roll back on failure.
-        mutateMilestones();
+        mutate();
         const reverted = { ...nextOverlay, [milestone.id]: current };
         setOverlay(reverted);
         saveOverlay(reverted);
@@ -86,8 +78,7 @@ export default function BoardApp({ userName }: { userName: string }) {
     }
   }
 
-  const loading = rocksLoading || msLoading;
-  const error = rocksError || msError;
+  const loading = isLoading;
 
   return (
     <div className="flex h-screen flex-col bg-slate-50">

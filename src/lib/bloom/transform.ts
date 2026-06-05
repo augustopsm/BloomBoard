@@ -123,6 +123,19 @@ export function toIssue(raw: Raw): Issue {
   };
 }
 
+/**
+ * Pull the milestones embedded in a raw rock payload, stamping each with its
+ * parent rock's id (embedded milestones often omit their own RockId).
+ */
+export function extractMilestones(rawRock: Raw): Milestone[] {
+  const rockId = asString(pick(rawRock, "Id", "id")) ?? null;
+  const list = pick(rawRock, "Milestones", "milestones");
+  return toArray(list).map((m) => {
+    const milestone = toMilestone(m);
+    return { ...milestone, rockId: milestone.rockId ?? rockId };
+  });
+}
+
 /** Bloom list endpoints sometimes wrap results in `{ items: [...] }`. */
 export function toArray(payload: unknown): Raw[] {
   if (Array.isArray(payload)) return payload as Raw[];

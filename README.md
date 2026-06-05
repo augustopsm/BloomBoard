@@ -76,6 +76,7 @@ src/
 │  ├─ page.tsx                  Board page (redirects to /login if no session)
 │  └─ api/
 │     ├─ auth/{login,logout,session}/   Token exchange + cookie session
+│     ├─ board/                 GET rocks + their nested milestones (1 call)
 │     ├─ rocks/                 GET normalized rocks
 │     ├─ milestones/            GET list, PATCH [id] to toggle complete
 │     ├─ todos/                 GET normalized to-dos
@@ -95,13 +96,21 @@ src/
 
 ### ⚠️ A note on API endpoint paths
 
-Bloom's Swagger requires a token to inspect, so only two routes are confirmed
-from the public docs: `POST /token` and `GET /api/v1/scorecard/items/`. The
-remaining resource paths in [`src/lib/bloom/endpoints.ts`](src/lib/bloom/endpoints.ts)
-follow Bloom's `/api/v1/<resource>` convention but **should be verified against
-your account's Swagger** (`https://app.bloomgrowth.com/swagger/index.html`).
-Everything funnels through that one file, so if a path differs you only fix it
-in one place — the rest of the app uses normalized types and won't change.
+Bloom's Swagger requires a token to inspect. From the public docs we know:
+
+- Auth is `POST /Token` with a form-encoded body.
+- "My items" reads use a `/user/mine` suffix — the documented metrics example
+  is `GET /api/v1/scorecard/user/mine`.
+- **Milestones live inside rocks**, so BloomBoard reads
+  `GET /api/v1/rocks/user/mine` and extracts the embedded milestones rather
+  than hitting a (non-existent) top-level milestones list.
+
+The resource paths in [`src/lib/bloom/endpoints.ts`](src/lib/bloom/endpoints.ts)
+follow that documented `/api/v1/<resource>/user/mine` convention but **should
+still be verified against your account's Swagger**
+(`https://app.bloomgrowth.com/swagger/index.html`). Everything funnels through
+that one file, so if a path differs you only fix it in one place — the rest of
+the app uses normalized types and won't change.
 
 ---
 
