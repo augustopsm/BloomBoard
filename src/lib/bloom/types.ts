@@ -20,6 +20,10 @@ export interface Rock {
   owner: Owner | null;
   /** 0–100, derived from milestone completion when the API omits it. */
   completion: number;
+  createdAt?: string | null;
+  /** Meetings this rock belongs to (Bloom `Origins`). */
+  meetings?: string[];
+  detailsUrl?: string | null;
 }
 
 /**
@@ -34,6 +38,7 @@ export interface Milestone {
   complete: boolean;
   dueDate: string | null;
   owner: Owner | null;
+  createdAt?: string | null;
 }
 
 /** An action item (EOS "To-Do"). */
@@ -43,6 +48,10 @@ export interface Todo {
   complete: boolean;
   dueDate: string | null;
   owner: Owner | null;
+  /** Where the to-do comes from, e.g. its meeting (Bloom `ContextTitle`). */
+  context?: string | null;
+  createdAt?: string | null;
+  detailsUrl?: string | null;
 }
 
 /** An issue to be processed via IDS (Identify, Discuss, Solve). */
@@ -52,6 +61,12 @@ export interface Issue {
   description: string | null;
   complete: boolean;
   owner: Owner | null;
+  /** Lower number = higher priority in Bloom. */
+  priority?: number | null;
+  /** The meeting the issue was raised in (Bloom `FromWhere`/`Origin`). */
+  fromWhere?: string | null;
+  createdAt?: string | null;
+  detailsUrl?: string | null;
 }
 
 /** Shape returned by the Bloom `/token` endpoint. */

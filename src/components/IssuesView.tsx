@@ -5,9 +5,11 @@ import type { Issue } from "@/lib/bloom/types";
 export default function IssuesView({
   issues,
   onToggle,
+  onOpen,
 }: {
   issues: Issue[];
   onToggle: (id: string, complete: boolean) => void;
+  onOpen: (issue: Issue) => void;
 }) {
   const open = issues.filter((i) => !i.complete);
   const solved = issues.filter((i) => i.complete);
@@ -22,6 +24,7 @@ export default function IssuesView({
         accentClass="bg-zinc-800 text-zinc-400"
         actionLabel="Solve"
         onAction={(id) => onToggle(id, true)}
+        onOpen={onOpen}
       />
       <IssueColumn
         title="Solved"
@@ -31,6 +34,7 @@ export default function IssuesView({
         accentClass="bg-emerald-500/10 text-emerald-400"
         actionLabel="Reopen"
         onAction={(id) => onToggle(id, false)}
+        onOpen={onOpen}
       />
     </div>
   );
@@ -44,6 +48,7 @@ function IssueColumn({
   accentClass,
   actionLabel,
   onAction,
+  onOpen,
 }: {
   title: string;
   count: number;
@@ -52,6 +57,7 @@ function IssueColumn({
   accentClass: string;
   actionLabel: string;
   onAction: (id: string) => void;
+  onOpen: (issue: Issue) => void;
 }) {
   return (
     <div className="flex w-[420px] shrink-0 flex-col">
@@ -74,6 +80,7 @@ function IssueColumn({
             issue={issue}
             actionLabel={actionLabel}
             onAction={() => onAction(issue.id)}
+            onOpen={() => onOpen(issue)}
           />
         ))}
       </div>
@@ -85,13 +92,18 @@ function IssueRow({
   issue,
   actionLabel,
   onAction,
+  onOpen,
 }: {
   issue: Issue;
   actionLabel: string;
   onAction: () => void;
+  onOpen: () => void;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-lg border border-white/[0.07] bg-surface px-3 py-2.5 transition hover:border-white/[0.12] hover:bg-surface-hover">
+    <div
+      onClick={onOpen}
+      className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/[0.07] bg-surface px-3 py-2.5 transition hover:border-white/[0.12] hover:bg-surface-hover"
+    >
       <span className="mt-[5px] h-2 w-2 shrink-0 rounded-full bg-violet-500/70" />
 
       <div className="min-w-0 flex-1">
@@ -108,7 +120,10 @@ function IssueRow({
       </div>
 
       <button
-        onClick={onAction}
+        onClick={(e) => {
+          e.stopPropagation();
+          onAction();
+        }}
         className="shrink-0 rounded-md border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[11px] font-medium text-zinc-500 transition hover:border-white/[0.16] hover:bg-white/[0.06] hover:text-zinc-300"
       >
         {actionLabel}

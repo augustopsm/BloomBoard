@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import { colorForRock, type BoardCard } from "@/lib/board";
+import {
+  colorForRock,
+  ISSUE_GROUP_ID,
+  TODO_GROUP_ID,
+  type BoardCard,
+} from "@/lib/board";
 import type { Rock } from "@/lib/bloom/types";
 
 export default function RockFilter({
@@ -9,12 +14,16 @@ export default function RockFilter({
   cards,
   activeRockIds,
   onChange,
+  onOpenRock,
 }: {
   rocks: Rock[];
   cards: BoardCard[];
   activeRockIds: Set<string> | null;
   onChange: (ids: Set<string> | null) => void;
+  onOpenRock: (rock: Rock) => void;
 }) {
+  const isSynthetic = (id: string) =>
+    id === TODO_GROUP_ID || id === ISSUE_GROUP_ID;
   const counts = useMemo(() => {
     const map = new Map<string, number>();
     for (const c of cards) {
@@ -54,26 +63,42 @@ export default function RockFilter({
           <p className="px-2 text-xs text-zinc-600">No rocks loaded.</p>
         )}
         {rocks.map((rock) => (
-          <button
+          <div
             key={rock.id}
-            onClick={() => toggle(rock.id)}
-            className={`mb-0.5 flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-left text-sm transition ${
+            className={`group mb-0.5 flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition ${
               isActive(rock.id)
                 ? "bg-white/[0.05] text-zinc-200"
                 : "text-zinc-600 hover:bg-white/[0.03] hover:text-zinc-400"
             }`}
           >
-            <span
-              className="h-2.5 w-2.5 shrink-0 rounded-full opacity-90"
-              style={{ backgroundColor: colorForRock(rock.id) }}
-            />
-            <span className="min-w-0 flex-1 truncate text-[13px]" title={rock.name}>
-              {rock.name}
-            </span>
+            <button
+              onClick={() => toggle(rock.id)}
+              className="flex min-w-0 flex-1 items-center gap-2.5 text-left"
+            >
+              <span
+                className="h-2.5 w-2.5 shrink-0 rounded-full opacity-90"
+                style={{ backgroundColor: colorForRock(rock.id) }}
+              />
+              <span className="min-w-0 flex-1 truncate text-[13px]" title={rock.name}>
+                {rock.name}
+              </span>
+            </button>
+            {!isSynthetic(rock.id) && (
+              <button
+                onClick={() => onOpenRock(rock)}
+                aria-label="View details"
+                className="hidden shrink-0 rounded p-0.5 text-zinc-500 transition hover:bg-white/[0.08] hover:text-zinc-200 group-hover:block"
+              >
+                <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                  <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3" />
+                  <path d="M8 7.2v3.3M8 5.2v.1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
             <span className="shrink-0 text-[11px] tabular-nums text-zinc-600">
               {counts.get(rock.id) ?? 0}
             </span>
-          </button>
+          </div>
         ))}
 
         {hasUnassigned && (

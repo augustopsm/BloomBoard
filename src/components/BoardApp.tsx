@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Board from "./Board";
+import DetailDrawer, {
+  detailFromCard,
+  detailFromIssue,
+  detailFromRock,
+  type DetailItem,
+} from "./DetailDrawer";
 import Header, { type AppView } from "./Header";
 import IssuesView from "./IssuesView";
 import RockFilter from "./RockFilter";
@@ -26,6 +32,9 @@ export default function BoardApp({ userName }: { userName: string }) {
   const [overlay, setOverlay] = useState<Record<string, ColumnId>>({});
   const [activeRockIds, setActiveRockIds] = useState<Set<string> | null>(null);
   const [query, setQuery] = useState("");
+  const [detail, setDetail] = useState<{ item: DetailItem; label?: string } | null>(
+    null,
+  );
 
   useEffect(() => setOverlay(loadOverlay()), []);
 
@@ -152,6 +161,9 @@ export default function BoardApp({ userName }: { userName: string }) {
             cards={cards}
             activeRockIds={activeRockIds}
             onChange={setActiveRockIds}
+            onOpenRock={(rock) =>
+              setDetail({ item: detailFromRock(rock), label: "Rock" })
+            }
           />
         )}
 
@@ -161,7 +173,11 @@ export default function BoardApp({ userName }: { userName: string }) {
           ) : loading ? (
             <LoadingState />
           ) : view === "issues" ? (
-            <IssuesView issues={issues} onToggle={toggleIssue} />
+            <IssuesView
+              issues={issues}
+              onToggle={toggleIssue}
+              onOpen={(issue) => setDetail({ item: detailFromIssue(issue) })}
+            />
           ) : cards.length === 0 ? (
             <EmptyState />
           ) : (
@@ -170,10 +186,19 @@ export default function BoardApp({ userName }: { userName: string }) {
               groups={groups}
               overlay={overlay}
               onMove={moveTo}
+              onOpenCard={(card, groupName) =>
+                setDetail({ item: detailFromCard(card, groupName) })
+              }
             />
           )}
         </main>
       </div>
+
+      <DetailDrawer
+        item={detail?.item ?? null}
+        kindLabelOverride={detail?.label}
+        onClose={() => setDetail(null)}
+      />
     </div>
   );
 }

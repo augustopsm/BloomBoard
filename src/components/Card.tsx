@@ -13,10 +13,12 @@ export default function Card({
   card,
   groupName,
   dragging = false,
+  onOpen,
 }: {
   card: BoardCard;
   groupName: string;
   dragging?: boolean;
+  onOpen?: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: card.uid });
@@ -30,6 +32,7 @@ export default function Card({
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      onClick={onOpen}
       style={{ transform: CSS.Translate.toString(transform) }}
       className={`group cursor-grab touch-none rounded-lg border bg-surface p-3 transition-all active:cursor-grabbing ${
         dragging

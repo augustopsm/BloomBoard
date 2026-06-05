@@ -32,6 +32,10 @@ export interface BoardCard {
   owner: Owner | null;
   /** Milestones: parent rock id. To-Dos: the synthetic TODO_GROUP_ID. */
   rockId: string | null;
+  // Detail fields surfaced in the detail drawer.
+  context?: string | null;
+  createdAt?: string | null;
+  detailsUrl?: string | null;
 }
 
 /** Synthetic "rock" that gathers rock-less to-dos. */
@@ -52,6 +56,7 @@ export function milestoneToCard(m: Milestone): BoardCard {
     dueDate: m.dueDate,
     owner: m.owner,
     rockId: m.rockId,
+    createdAt: m.createdAt,
   };
 }
 
@@ -65,6 +70,9 @@ export function todoToCard(t: Todo): BoardCard {
     dueDate: t.dueDate,
     owner: t.owner,
     rockId: TODO_GROUP_ID,
+    context: t.context,
+    createdAt: t.createdAt,
+    detailsUrl: t.detailsUrl,
   };
 }
 

@@ -5,6 +5,7 @@
 // few likely key spellings and falls back gracefully. This keeps the UI stable
 // even if a field name shifts.
 
+import { BLOOM_BASE_URL } from "./endpoints";
 import type {
   Issue,
   Milestone,
@@ -15,6 +16,22 @@ import type {
 } from "./types";
 
 type Raw = Record<string, unknown>;
+
+/** Normalize Bloom's `DetailsUrl` (often relative) into an absolute link. */
+function toDetailsUrl(v: unknown): string | null {
+  const s = asString(v);
+  if (!s) return null;
+  if (/^https?:\/\//i.test(s)) return s;
+  return `${BLOOM_BASE_URL}/${s.replace(/^\//, "")}`;
+}
+
+/** Bloom `Origins` is an array of { Name, Id }; pull out the names. */
+function toMeetingNames(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((o) => (o && typeof o === "object" ? asString((o as Raw).Name) : undefined))
+    .filter((n): n is string => Boolean(n));
+}
 
 /** Pick the first defined value across a list of candidate keys. */
 function pick<T = unknown>(obj: Raw, ...keys: string[]): T | undefined {
@@ -94,6 +111,9 @@ export function toRock(raw: Raw): Rock {
     // Real progress % is derived from milestone completion in service.ts; this
     // is just a sensible default for rocks with no milestones.
     completion: status === "complete" ? 100 : 0,
+    createdAt: asIsoDate(pick(raw, "CreateTime", "createTime", "CreatedAt")),
+    meetings: toMeetingNames(pick(raw, "Origins", "origins")),
+    detailsUrl: toDetailsUrl(pick(raw, "DetailsUrl", "detailsUrl")),
   };
 }
 
@@ -116,6 +136,7 @@ export function toMilestone(raw: Raw): Milestone {
     complete: milestoneComplete(raw),
     dueDate: asIsoDate(pick(raw, "DueDate", "dueDate", "Date")),
     owner: toOwner(pick(raw, "Owner", "owner", "User", "user")),
+    createdAt: asIsoDate(pick(raw, "CreateTime", "createTime", "CreatedAt")),
   };
 }
 
@@ -126,16 +147,24 @@ export function toTodo(raw: Raw): Todo {
     complete: asBool(pick(raw, "Complete", "complete", "Completed")),
     dueDate: asIsoDate(pick(raw, "DueDate", "dueDate", "Date")),
     owner: toOwner(pick(raw, "Owner", "owner", "User", "user")),
+    context: asString(pick(raw, "ContextTitle", "contextTitle", "Context")) ?? null,
+    createdAt: asIsoDate(pick(raw, "CreateTime", "createTime", "CreatedAt")),
+    detailsUrl: toDetailsUrl(pick(raw, "DetailsUrl", "detailsUrl")),
   };
 }
 
 export function toIssue(raw: Raw): Issue {
+  const priority = pick(raw, "Priority", "priority");
   return {
     id: asString(pick(raw, "Id", "id"))!,
     name: asString(pick(raw, "Name", "name", "Title", "title")) ?? "Untitled",
     description: asString(pick(raw, "Details", "details", "Description", "description")) ?? null,
     complete: asBool(pick(raw, "Complete", "complete", "Completed")),
     owner: toOwner(pick(raw, "Owner", "owner", "User", "user")),
+    priority: priority === undefined || priority === null ? null : Number(priority),
+    fromWhere: asString(pick(raw, "FromWhere", "fromWhere", "Origin", "origin")) ?? null,
+    createdAt: asIsoDate(pick(raw, "CreateTime", "createTime", "CreatedAt")),
+    detailsUrl: toDetailsUrl(pick(raw, "DetailsUrl", "detailsUrl")),
   };
 }
 

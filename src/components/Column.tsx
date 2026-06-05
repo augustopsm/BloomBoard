@@ -8,10 +8,12 @@ export default function Column({
   column,
   cards,
   groupName,
+  onOpenCard,
 }: {
   column: ColumnDef;
   cards: BoardCard[];
   groupName: (rockId: string | null) => string;
+  onOpenCard: (card: BoardCard, groupName: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
@@ -38,7 +40,12 @@ export default function Column({
           </p>
         )}
         {cards.map((c) => (
-          <Card key={c.uid} card={c} groupName={groupName(c.rockId)} />
+          <Card
+            key={c.uid}
+            card={c}
+            groupName={groupName(c.rockId)}
+            onOpen={() => onOpenCard(c, groupName(c.rockId))}
+          />
         ))}
       </div>
     </div>
