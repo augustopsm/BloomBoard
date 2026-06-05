@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 html,
@@ -12,17 +12,19 @@ body {
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-[#0f0f11] text-zinc-100 antialiased;
 }
 
-/* Thin, unobtrusive scrollbars for the horizontal board. */
 .scrollbar-thin::-webkit-scrollbar {
-  height: 8px;
-  width: 8px;
+  height: 6px;
+  width: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  @apply rounded-full bg-slate-300;
+  @apply rounded-full bg-zinc-700/60;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-400;
+  @apply bg-zinc-600;
 }

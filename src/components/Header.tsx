@@ -20,14 +20,14 @@ export default function Header({
   }
 
   return (
-    <header className="flex items-center gap-4 border-b border-slate-200 bg-white px-4 py-3">
-      <div className="flex items-center gap-2">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-bloom text-lg">
+    <header className="flex items-center gap-4 border-b border-white/[0.06] bg-[#111113] px-4 py-2.5">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-bloom/90 text-sm">
           🌸
         </span>
         <div className="leading-tight">
-          <h1 className="text-sm font-semibold text-slate-900">BloomBoard</h1>
-          <p className="text-[11px] text-slate-400">Milestones · Kanban</p>
+          <h1 className="text-sm font-semibold text-zinc-100">BloomBoard</h1>
+          <p className="text-[10px] text-zinc-600">Milestones · Kanban</p>
         </div>
       </div>
 
@@ -35,16 +35,16 @@ export default function Header({
         <input
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
-          placeholder="Search milestones…"
-          className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm outline-none focus:border-bloom focus:bg-white focus:ring-2 focus:ring-bloom/20"
+          placeholder="Search…"
+          className="w-full rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-sm text-zinc-200 placeholder:text-zinc-600 outline-none transition focus:border-bloom/60 focus:bg-white/[0.06] focus:ring-1 focus:ring-bloom/30"
         />
       </div>
 
       <div className="ml-auto flex items-center gap-3">
-        <span className="hidden text-sm text-slate-500 sm:inline">{userName}</span>
+        <span className="hidden text-sm text-zinc-500 sm:inline">{userName}</span>
         <button
           onClick={logout}
-          className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+          className="rounded-md border border-white/[0.08] bg-white/[0.04] px-3 py-1.5 text-sm font-medium text-zinc-400 transition hover:bg-white/[0.08] hover:text-zinc-200"
         >
           Sign out
         </button>

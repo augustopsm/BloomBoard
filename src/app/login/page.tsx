@@ -34,21 +34,21 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-bloom-light to-slate-100 p-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-xl ring-1 ring-slate-200">
-        <div className="mb-6 text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-bloom text-2xl">
+    <main className="flex min-h-screen items-center justify-center bg-[#0f0f11] p-4">
+      <div className="w-full max-w-sm rounded-xl border border-white/[0.08] bg-surface p-8 shadow-2xl shadow-black/50">
+        <div className="mb-7 text-center">
+          <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-bloom/90 text-xl">
             🌸
           </div>
-          <h1 className="text-xl font-semibold text-slate-900">BloomBoard</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="text-lg font-semibold text-zinc-100">BloomBoard</h1>
+          <p className="mt-1 text-sm text-zinc-500">
             Sign in with your Bloom Growth credentials.
           </p>
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
+            <label className="mb-1.5 block text-xs font-medium text-zinc-400">
               Email
             </label>
             <input
@@ -57,12 +57,12 @@ export default function LoginPage() {
               autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-bloom focus:ring-2 focus:ring-bloom/30"
+              className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition focus:border-bloom/60 focus:bg-white/[0.06] focus:ring-1 focus:ring-bloom/30"
               placeholder="you@company.com"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">
+            <label className="mb-1.5 block text-xs font-medium text-zinc-400">
               Password
             </label>
             <input
@@ -71,13 +71,13 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-bloom focus:ring-2 focus:ring-bloom/30"
+              className="w-full rounded-lg border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 outline-none transition focus:border-bloom/60 focus:bg-white/[0.06] focus:ring-1 focus:ring-bloom/30"
               placeholder="••••••••"
             />
           </div>
 
           {error && (
-            <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            <p className="rounded-lg border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-400">
               {error}
             </p>
           )}
@@ -85,15 +85,15 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-bloom px-4 py-2 text-sm font-semibold text-white transition hover:bg-bloom-dark disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-lg bg-bloom px-4 py-2 text-sm font-semibold text-white transition hover:bg-bloom-dark disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
 
-        <p className="mt-6 text-center text-xs text-slate-400">
-          Credentials are sent directly to Bloom Growth and never stored.
-          Your access token is kept in a secure, httpOnly cookie.
+        <p className="mt-6 text-center text-[11px] leading-relaxed text-zinc-700">
+          Credentials go directly to Bloom Growth and are never stored.
+          Your token is kept in a secure httpOnly cookie.
         </p>
       </div>
     </main>

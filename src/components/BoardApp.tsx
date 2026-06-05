@@ -130,7 +130,7 @@ export default function BoardApp({ userName }: { userName: string }) {
   const loading = isLoading;
 
   return (
-    <div className="flex h-screen flex-col bg-slate-50">
+    <div className="flex h-screen flex-col bg-[#0f0f11]">
       <Header userName={userName} query={query} onQueryChange={setQuery} />
 
       <div className="flex min-h-0 flex-1">
@@ -164,8 +164,8 @@ export default function BoardApp({ userName }: { userName: string }) {
 
 function LoadingState() {
   return (
-    <div className="flex h-full items-center justify-center text-sm text-slate-400">
-      Loading your milestones, to-dos, and issues from Bloom Growth…
+    <div className="flex h-full items-center justify-center text-sm text-zinc-600">
+      Loading from Bloom Growth…
     </div>
   );
 }
@@ -173,10 +173,9 @@ function LoadingState() {
 function EmptyState() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-      <span className="text-3xl">🌱</span>
-      <p className="text-sm text-slate-500">
-        Nothing to show yet. Add milestones to your Rocks (or create to-dos) in
-        Bloom Growth and they&apos;ll appear here.
+      <p className="text-2xl">🌱</p>
+      <p className="text-sm text-zinc-600">
+        Nothing to show yet. Add milestones or to-dos in Bloom Growth and they&apos;ll appear here.
       </p>
     </div>
   );
@@ -185,11 +184,9 @@ function EmptyState() {
 function ErrorState({ message }: { message: string }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
-      <span className="text-3xl">⚠️</span>
-      <p className="max-w-md text-sm text-rose-600">{message}</p>
-      <p className="max-w-md text-xs text-slate-400">
-        If this is a 404, the Bloom API path may differ for your account —
-        adjust <code>src/lib/bloom/endpoints.ts</code>.
+      <p className="max-w-md text-sm text-rose-400">{message}</p>
+      <p className="max-w-md text-xs text-zinc-600">
+        If this is a 404, check <code className="text-zinc-500">src/lib/bloom/endpoints.ts</code>.
       </p>
     </div>
   );

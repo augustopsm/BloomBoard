@@ -10,6 +10,12 @@ const config: Config = {
           dark: "#4429d4",
           light: "#efeafe",
         },
+        // Linear-inspired surface scale
+        surface: {
+          DEFAULT: "#1c1c1f",
+          hover: "#222226",
+          raised: "#26262a",
+        },
       },
       keyframes: {
         "fade-in": {

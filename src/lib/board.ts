@@ -93,25 +93,25 @@ export const COLUMNS: ColumnDef[] = [
   {
     id: "todo",
     title: "To Do",
-    accent: "bg-slate-100 text-slate-600",
+    accent: "bg-zinc-800 text-zinc-400",
     description: "Planned, not started",
   },
   {
     id: "in-progress",
     title: "In Progress",
-    accent: "bg-blue-100 text-blue-700",
+    accent: "bg-blue-500/10 text-blue-400",
     description: "Actively being worked",
   },
   {
     id: "blocked",
     title: "Blocked",
-    accent: "bg-amber-100 text-amber-700",
+    accent: "bg-amber-500/10 text-amber-400",
     description: "Waiting / at risk",
   },
   {
     id: "complete",
     title: "Complete",
-    accent: "bg-emerald-100 text-emerald-700",
+    accent: "bg-emerald-500/10 text-emerald-400",
     description: "Done in Bloom Growth",
   },
 ];

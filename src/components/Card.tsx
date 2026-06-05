@@ -16,7 +16,6 @@ export default function Card({
 }: {
   card: BoardCard;
   groupName: string;
-  /** True only for the floating DragOverlay clone. */
   dragging?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
@@ -32,36 +31,38 @@ export default function Card({
       {...listeners}
       {...attributes}
       style={{ transform: CSS.Translate.toString(transform) }}
-      className={`group cursor-grab touch-none rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition active:cursor-grabbing ${
-        dragging ? "rotate-2 shadow-lg ring-2 ring-bloom/40" : "hover:shadow-md"
-      } ${isDragging && !dragging ? "opacity-40" : ""}`}
+      className={`group cursor-grab touch-none rounded-lg border bg-surface p-3 transition-all active:cursor-grabbing ${
+        dragging
+          ? "rotate-1 border-bloom/30 shadow-2xl shadow-black/60 ring-1 ring-bloom/20"
+          : "border-white/[0.07] hover:border-white/[0.12] hover:bg-surface-hover"
+      } ${isDragging && !dragging ? "opacity-30" : ""}`}
     >
       <div className="mb-2 flex items-start gap-2">
         <span
-          className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full"
+          className="mt-[3px] h-2 w-2 shrink-0 rounded-full"
           style={{ backgroundColor: accent }}
           aria-hidden
         />
         <p
-          className={`text-sm leading-snug ${
-            card.complete ? "text-slate-400 line-through" : "text-slate-800"
+          className={`text-[13px] leading-snug ${
+            card.complete ? "text-zinc-600 line-through" : "text-zinc-200"
           }`}
         >
           {card.name}
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 pl-[18px] text-xs">
+      <div className="flex flex-wrap items-center gap-1.5 pl-4 text-[11px]">
         {card.kind === "todo" ? (
-          <span className="rounded bg-cyan-50 px-1.5 py-0.5 font-medium text-cyan-700">
+          <span className="rounded bg-cyan-500/10 px-1.5 py-0.5 font-medium text-cyan-400">
             To-Do
           </span>
         ) : card.kind === "issue" ? (
-          <span className="rounded bg-violet-50 px-1.5 py-0.5 font-medium text-violet-700">
+          <span className="rounded bg-violet-500/10 px-1.5 py-0.5 font-medium text-violet-400">
             Issue
           </span>
         ) : (
-          <span className="truncate text-slate-400" title={groupName}>
+          <span className="truncate text-zinc-600" title={groupName}>
             {groupName}
           </span>
         )}
@@ -70,8 +71,8 @@ export default function Card({
           <span
             className={`ml-auto rounded px-1.5 py-0.5 font-medium ${
               overdue
-                ? "bg-rose-50 text-rose-600"
-                : "bg-slate-100 text-slate-500"
+                ? "bg-rose-500/10 text-rose-400"
+                : "bg-white/[0.04] text-zinc-600"
             }`}
           >
             {overdue ? "Overdue · " : ""}
@@ -81,11 +82,11 @@ export default function Card({
       </div>
 
       {card.owner && (
-        <div className="mt-2 flex items-center gap-1.5 pl-[18px]">
-          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-600">
+        <div className="mt-2 flex items-center gap-1.5 pl-4">
+          <span className="flex h-4.5 w-4.5 h-[18px] w-[18px] items-center justify-center rounded-full bg-zinc-700 text-[9px] font-semibold text-zinc-300">
             {initials(card.owner.name)}
           </span>
-          <span className="truncate text-xs text-slate-400">
+          <span className="truncate text-[11px] text-zinc-600">
             {card.owner.name}
           </span>
         </div>

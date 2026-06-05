@@ -16,28 +16,24 @@ export default function Column({
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   return (
-    <div className="flex w-72 shrink-0 flex-col">
-      <div className="mb-2 flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
-          <span
-            className={`rounded-md px-2 py-0.5 text-xs font-semibold ${column.accent}`}
-          >
-            {column.title}
-          </span>
-          <span className="text-xs text-slate-400">{cards.length}</span>
-        </div>
+    <div className="flex w-[272px] shrink-0 flex-col">
+      <div className="mb-2 flex items-center gap-2.5 px-1">
+        <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-wide ${column.accent}`}>
+          {column.title}
+        </span>
+        <span className="text-[11px] tabular-nums text-zinc-600">{cards.length}</span>
       </div>
 
       <div
         ref={setNodeRef}
-        className={`scrollbar-thin flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto rounded-xl border border-dashed p-2 transition ${
+        className={`scrollbar-thin flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto rounded-xl border p-2 transition-colors ${
           isOver
-            ? "border-bloom bg-bloom-light/60"
-            : "border-slate-200 bg-slate-100/50"
+            ? "border-bloom/40 bg-bloom/[0.05]"
+            : "border-white/[0.06] bg-white/[0.02]"
         }`}
       >
         {cards.length === 0 && (
-          <p className="px-1 py-6 text-center text-xs text-slate-300">
+          <p className="px-1 py-8 text-center text-[11px] text-zinc-700">
             {column.description}
           </p>
         )}
