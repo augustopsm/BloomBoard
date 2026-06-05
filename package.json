@@ -5,6 +5,7 @@
   "description": "A Kanban board for Bloom Growth — visualize Rocks, Milestones, To-Dos and Issues (IDS).",
   "scripts": {
     "dev": "next dev",
+    "dev:sync": "bash scripts/dev-sync.sh",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
