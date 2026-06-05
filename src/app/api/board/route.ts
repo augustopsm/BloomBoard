@@ -1,19 +1,20 @@
 import { NextResponse } from "next/server";
 import { errorResponse, requireSession } from "@/lib/api-helpers";
-import { getTodos, loadRocksAndMilestones } from "@/lib/bloom/service";
-import type { Todo } from "@/lib/bloom/types";
+import { getIssues, getTodos, loadRocksAndMilestones } from "@/lib/bloom/service";
+import type { Issue, Todo } from "@/lib/bloom/types";
 
-// The board's single data source: rocks + their milestones, plus standalone
-// to-dos (shown under a synthetic "To-Dos" group). Rocks/milestones are
-// essential; to-dos are best-effort — a failure there must not blank the board.
+// The board's single data source: rocks + milestones + to-dos + issues.
+// Rocks/milestones are essential; to-dos and issues are best-effort so a
+// failure in either doesn't blank the whole board.
 export async function GET() {
   const session = requireSession();
   if (session instanceof NextResponse) return session;
 
   try {
-    const [rm, td] = await Promise.allSettled([
+    const [rm, td, is] = await Promise.allSettled([
       loadRocksAndMilestones(session.token),
       getTodos(session.token),
+      getIssues(session.token),
     ]);
 
     if (rm.status === "rejected") throw rm.reason;
@@ -23,11 +24,17 @@ export async function GET() {
     if (td.status === "fulfilled") {
       todos = td.value;
     } else {
-      // Don't fail the whole board; surface the cause in the server log.
       console.error("[board] to-dos fetch failed:", td.reason);
     }
 
-    return NextResponse.json({ rocks, milestones, todos });
+    let issues: Issue[] = [];
+    if (is.status === "fulfilled") {
+      issues = is.value;
+    } else {
+      console.error("[board] issues fetch failed:", is.reason);
+    }
+
+    return NextResponse.json({ rocks, milestones, todos, issues });
   } catch (err) {
     return errorResponse(err);
   }

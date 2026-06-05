@@ -1,22 +1,19 @@
 // ─────────────────────────────────────────────────────────────────────────
-// Bloom Growth API endpoint map.
-//
-// Every path the app hits lives here so that if Bloom's routes differ from
-// what's assumed below, there is exactly ONE place to fix it.
+// Bloom Growth API endpoint map — sourced from the live Swagger spec.
 //
 // Verified against a live account (2026-06):
 //
-//   • Auth:                 POST /Token                       (form-encoded)
-//   • Current user:         GET  /api/v1/users/mine           → 200
-//   • My rocks:             GET  /api/v1/rocks/user/mine      → 200 (array)
-//   • A rock's milestones:  GET  /api/v1/rocks/{id}/milestones → 200 (array)
-//   • My to-dos:            GET  /api/v1/todos/user/mine      → 200
-//   • My issues (IDS):      GET  /api/v1/issues/user/mine     → 200
+//   • Auth:                 POST /Token                            (form-encoded)
+//   • Current user:         GET  /api/v1/users/mine               → 200
+//   • My rocks:             GET  /api/v1/rocks/user/mine          → 200 (array)
+//   • A rock's milestones:  GET  /api/v1/rocks/{id}/milestones    → 200 (array)
+//   • My to-dos:            GET  /api/v1/todo/users/mine          → 200 (array)
+//   • Complete a to-do:     POST /api/v1/todo/{id}/complete?status=bool
+//   • My issues (IDS):      GET  /api/v1/issues/users/mine        → 200 (array)
+//   • Complete an issue:    POST /api/v1/issues/{id}/complete     body: { complete: bool }
 //
-// Milestones do NOT come embedded in the rocks list — they're fetched per rock
-// from the path above (see service.ts). The milestone completion field on read
-// is a string `Status` ("Done"); the write contract for toggling it is the one
-// piece still being confirmed (see setMilestoneComplete in service.ts).
+// Note: /api/v1/todos/* (plural) are NOT real API paths — they route to the
+// SPA. The real paths use singular /api/v1/todo/*.
 // ─────────────────────────────────────────────────────────────────────────
 
 export const BLOOM_BASE_URL =
@@ -42,10 +39,13 @@ export const endpoints = {
   milestone: (id: string) => `/api/v1/milestones/${id}`,
 
   /** The current user's action items. */
-  myTodos: "/api/v1/todos/user/mine",
-  todo: (id: string) => `/api/v1/todos/${id}`,
+  myTodos: "/api/v1/todo/users/mine",
+  todo: (id: string) => `/api/v1/todo/${id}`,
+  todoComplete: (id: string, complete: boolean) =>
+    `/api/v1/todo/${id}/complete?status=${complete}`,
 
   /** The current user's IDS issues. */
-  myIssues: "/api/v1/issues/user/mine",
+  myIssues: "/api/v1/issues/users/mine",
   issue: (id: string) => `/api/v1/issues/${id}`,
+  issueComplete: (id: string) => `/api/v1/issues/${id}/complete`,
 } as const;

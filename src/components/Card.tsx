@@ -56,6 +56,10 @@ export default function Card({
           <span className="rounded bg-cyan-50 px-1.5 py-0.5 font-medium text-cyan-700">
             To-Do
           </span>
+        ) : card.kind === "issue" ? (
+          <span className="rounded bg-violet-50 px-1.5 py-0.5 font-medium text-violet-700">
+            Issue
+          </span>
         ) : (
           <span className="truncate text-slate-400" title={groupName}>
             {groupName}

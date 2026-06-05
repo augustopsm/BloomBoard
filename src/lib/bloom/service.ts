@@ -6,6 +6,7 @@ import { endpoints } from "./endpoints";
 import { toArray, toIssue, toMilestone, toRock, toTodo } from "./transform";
 import type { Issue, Milestone, Rock, Todo } from "./types";
 
+
 /**
  * Fetch the current user's rocks, then each rock's milestones (Bloom lists
  * milestones only under their parent rock). Milestone requests run in parallel.
@@ -81,17 +82,30 @@ export async function setMilestoneComplete(
 }
 
 /**
- * Toggle a to-do's completion. To-dos expose a `Complete` boolean (unlike
- * milestones' string Status). The write contract is best-effort until verified
- * against an account that has to-dos — adjust the body here if needed.
+ * Toggle a to-do's completion via the dedicated complete endpoint.
+ * Spec: POST /api/v1/todo/{id}/complete?status=bool → returns boolean
  */
 export async function setTodoComplete(
   token: string,
   id: string,
   complete: boolean,
 ): Promise<void> {
-  await bloomFetch(token, endpoints.todo(id), {
-    method: "PUT",
-    body: JSON.stringify({ Complete: complete, complete }),
+  await bloomFetch(token, endpoints.todoComplete(id, complete), {
+    method: "POST",
+  });
+}
+
+/**
+ * Toggle an issue's completion.
+ * Spec: POST /api/v1/issues/{id}/complete  body: { complete: bool }
+ */
+export async function setIssueComplete(
+  token: string,
+  id: string,
+  complete: boolean,
+): Promise<void> {
+  await bloomFetch(token, endpoints.issueComplete(id), {
+    method: "POST",
+    body: JSON.stringify({ complete }),
   });
 }

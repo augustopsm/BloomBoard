@@ -7,6 +7,9 @@ import RockFilter from "./RockFilter";
 import { useBoard } from "@/hooks/useBloomData";
 import {
   columnFor,
+  issueToCard,
+  ISSUE_GROUP_ID,
+  ISSUE_GROUP_NAME,
   loadOverlay,
   milestoneToCard,
   saveOverlay,
@@ -30,30 +33,41 @@ export default function BoardApp({ userName }: { userName: string }) {
 
   const rocks: Rock[] = useMemo(() => data?.rocks ?? [], [data]);
 
-  // Milestones + standalone to-dos, unified into board cards.
+  // Milestones + to-dos + issues unified into board cards.
   const cards: BoardCard[] = useMemo(() => {
     const ms = (data?.milestones ?? []).map(milestoneToCard);
     const td = (data?.todos ?? []).map(todoToCard);
-    return [...ms, ...td];
+    const is = (data?.issues ?? []).map(issueToCard);
+    return [...ms, ...td, ...is];
   }, [data]);
 
   const hasTodos = (data?.todos?.length ?? 0) > 0;
+  const hasIssues = (data?.issues?.length ?? 0) > 0;
 
-  // The synthetic "To-Dos" group sits in the sidebar alongside real rocks.
   const groups: Rock[] = useMemo(() => {
-    if (!hasTodos) return rocks;
-    return [
-      ...rocks,
-      {
+    const extras: Rock[] = [];
+    if (hasTodos) {
+      extras.push({
         id: TODO_GROUP_ID,
         name: TODO_GROUP_NAME,
         status: "incomplete",
         dueDate: null,
         owner: null,
         completion: 0,
-      },
-    ];
-  }, [rocks, hasTodos]);
+      });
+    }
+    if (hasIssues) {
+      extras.push({
+        id: ISSUE_GROUP_ID,
+        name: ISSUE_GROUP_NAME,
+        status: "incomplete",
+        dueDate: null,
+        owner: null,
+        completion: 0,
+      });
+    }
+    return [...rocks, ...extras];
+  }, [rocks, hasTodos, hasIssues]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -78,8 +92,8 @@ export default function BoardApp({ userName }: { userName: string }) {
 
     const shouldComplete = target === "complete";
     if (shouldComplete !== card.complete) {
-      const listKey = card.kind === "todo" ? "todos" : "milestones";
-      // Optimistically reflect completion in the SWR cache.
+      const listKey =
+        card.kind === "todo" ? "todos" : card.kind === "issue" ? "issues" : "milestones";
       mutate(
         (prev) =>
           prev && {
@@ -94,7 +108,9 @@ export default function BoardApp({ userName }: { userName: string }) {
       const endpoint =
         card.kind === "todo"
           ? `/api/todos/${card.id}`
-          : `/api/milestones/${card.id}`;
+          : card.kind === "issue"
+            ? `/api/issues/${card.id}`
+            : `/api/milestones/${card.id}`;
       try {
         const res = await fetch(endpoint, {
           method: "PATCH",
@@ -103,7 +119,6 @@ export default function BoardApp({ userName }: { userName: string }) {
         });
         if (!res.ok) throw new Error();
       } catch {
-        // Roll back on failure.
         mutate();
         const reverted = { ...nextOverlay, [card.uid]: current };
         setOverlay(reverted);
@@ -150,7 +165,7 @@ export default function BoardApp({ userName }: { userName: string }) {
 function LoadingState() {
   return (
     <div className="flex h-full items-center justify-center text-sm text-slate-400">
-      Loading your milestones and to-dos from Bloom Growth…
+      Loading your milestones, to-dos, and issues from Bloom Growth…
     </div>
   );
 }

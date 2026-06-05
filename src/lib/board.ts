@@ -13,11 +13,11 @@
 //   • "To Do / In Progress / Blocked" are a *local workflow overlay* persisted
 //     in localStorage (keyed per card). They never alter Bloom data.
 
-import type { Milestone, Owner, Todo } from "./bloom/types";
+import type { Issue, Milestone, Owner, Todo } from "./bloom/types";
 
 export type ColumnId = "todo" | "in-progress" | "blocked" | "complete";
 
-export type CardKind = "milestone" | "todo";
+export type CardKind = "milestone" | "todo" | "issue";
 
 /** A unified card on the board — either a milestone or a standalone to-do. */
 export interface BoardCard {
@@ -37,6 +37,10 @@ export interface BoardCard {
 /** Synthetic "rock" that gathers rock-less to-dos. */
 export const TODO_GROUP_ID = "__todos__";
 export const TODO_GROUP_NAME = "To-Dos";
+
+/** Synthetic "rock" that gathers IDS issues. */
+export const ISSUE_GROUP_ID = "__issues__";
+export const ISSUE_GROUP_NAME = "Issues (IDS)";
 
 export function milestoneToCard(m: Milestone): BoardCard {
   return {
@@ -61,6 +65,19 @@ export function todoToCard(t: Todo): BoardCard {
     dueDate: t.dueDate,
     owner: t.owner,
     rockId: TODO_GROUP_ID,
+  };
+}
+
+export function issueToCard(i: Issue): BoardCard {
+  return {
+    uid: `issue:${i.id}`,
+    id: i.id,
+    kind: "issue",
+    name: i.name,
+    complete: i.complete,
+    dueDate: null,
+    owner: i.owner,
+    rockId: ISSUE_GROUP_ID,
   };
 }
 
@@ -144,6 +161,7 @@ const ROCK_PALETTE = [
 export function colorForRock(rockId: string | null): string {
   if (!rockId) return "#94a3b8"; // slate for unassigned
   if (rockId === TODO_GROUP_ID) return "#0891b2"; // fixed cyan for to-dos
+  if (rockId === ISSUE_GROUP_ID) return "#7c3aed"; // violet for issues
   let hash = 0;
   for (let i = 0; i < rockId.length; i++) {
     hash = (hash * 31 + rockId.charCodeAt(i)) >>> 0;
