@@ -76,8 +76,19 @@ export async function bloomFetch<T = unknown>(
     );
   }
 
-  // Some mutating endpoints return 204 / empty bodies.
+  // Some endpoints return 204 / empty / whitespace-only bodies.
   if (res.status === 204) return undefined as T;
-  const text = await res.text();
-  return (text ? JSON.parse(text) : undefined) as T;
+  const text = (await res.text()).trim();
+  if (!text) return undefined as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    // A 2xx with a non-JSON body (e.g. an HTML error page) shouldn't crash the
+    // caller; treat it as no data.
+    throw new BloomApiError(
+      `Bloom API ${init.method ?? "GET"} ${path} returned non-JSON (${res.status}).`,
+      res.status,
+      text.slice(0, 200),
+    );
+  }
 }
