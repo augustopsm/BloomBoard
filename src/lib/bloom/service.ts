@@ -79,3 +79,19 @@ export async function setMilestoneComplete(
     }),
   });
 }
+
+/**
+ * Toggle a to-do's completion. To-dos expose a `Complete` boolean (unlike
+ * milestones' string Status). The write contract is best-effort until verified
+ * against an account that has to-dos — adjust the body here if needed.
+ */
+export async function setTodoComplete(
+  token: string,
+  id: string,
+  complete: boolean,
+): Promise<void> {
+  await bloomFetch(token, endpoints.todo(id), {
+    method: "PUT",
+    body: JSON.stringify({ Complete: complete, complete }),
+  });
+}

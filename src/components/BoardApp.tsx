@@ -8,10 +8,15 @@ import { useBoard } from "@/hooks/useBloomData";
 import {
   columnFor,
   loadOverlay,
+  milestoneToCard,
   saveOverlay,
+  todoToCard,
+  TODO_GROUP_ID,
+  TODO_GROUP_NAME,
+  type BoardCard,
   type ColumnId,
 } from "@/lib/board";
-import type { Milestone, Rock } from "@/lib/bloom/types";
+import type { Rock } from "@/lib/bloom/types";
 
 export default function BoardApp({ userName }: { userName: string }) {
   const { data, error, isLoading, mutate } = useBoard();
@@ -24,45 +29,74 @@ export default function BoardApp({ userName }: { userName: string }) {
   useEffect(() => setOverlay(loadOverlay()), []);
 
   const rocks: Rock[] = useMemo(() => data?.rocks ?? [], [data]);
-  const milestones: Milestone[] = useMemo(() => data?.milestones ?? [], [data]);
+
+  // Milestones + standalone to-dos, unified into board cards.
+  const cards: BoardCard[] = useMemo(() => {
+    const ms = (data?.milestones ?? []).map(milestoneToCard);
+    const td = (data?.todos ?? []).map(todoToCard);
+    return [...ms, ...td];
+  }, [data]);
+
+  const hasTodos = (data?.todos?.length ?? 0) > 0;
+
+  // The synthetic "To-Dos" group sits in the sidebar alongside real rocks.
+  const groups: Rock[] = useMemo(() => {
+    if (!hasTodos) return rocks;
+    return [
+      ...rocks,
+      {
+        id: TODO_GROUP_ID,
+        name: TODO_GROUP_NAME,
+        status: "incomplete",
+        dueDate: null,
+        owner: null,
+        completion: 0,
+      },
+    ];
+  }, [rocks, hasTodos]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return milestones.filter((m) => {
-      if (activeRockIds && !activeRockIds.has(m.rockId ?? "__none__")) {
+    return cards.filter((c) => {
+      if (activeRockIds && !activeRockIds.has(c.rockId ?? "__none__")) {
         return false;
       }
-      if (q && !m.name.toLowerCase().includes(q)) return false;
+      if (q && !c.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [milestones, activeRockIds, query]);
+  }, [cards, activeRockIds, query]);
 
-  /** Move a milestone to a column — sync completion to Bloom, persist overlay. */
-  async function moveTo(milestone: Milestone, target: ColumnId) {
-    const current = columnFor(milestone, overlay);
+  /** Move a card to a column — sync completion to Bloom, persist overlay. */
+  async function moveTo(card: BoardCard, target: ColumnId) {
+    const current = columnFor(card, overlay);
     if (current === target) return;
 
     // Update the local overlay immediately for snappy UX.
-    const nextOverlay = { ...overlay, [milestone.id]: target };
+    const nextOverlay = { ...overlay, [card.uid]: target };
     setOverlay(nextOverlay);
     saveOverlay(nextOverlay);
 
     const shouldComplete = target === "complete";
-    if (shouldComplete !== milestone.complete) {
+    if (shouldComplete !== card.complete) {
+      const listKey = card.kind === "todo" ? "todos" : "milestones";
       // Optimistically reflect completion in the SWR cache.
       mutate(
         (prev) =>
           prev && {
             ...prev,
-            milestones: prev.milestones.map((m) =>
-              m.id === milestone.id ? { ...m, complete: shouldComplete } : m,
+            [listKey]: prev[listKey].map((item) =>
+              item.id === card.id ? { ...item, complete: shouldComplete } : item,
             ),
           },
         { revalidate: false },
       );
 
+      const endpoint =
+        card.kind === "todo"
+          ? `/api/todos/${card.id}`
+          : `/api/milestones/${card.id}`;
       try {
-        const res = await fetch(`/api/milestones/${milestone.id}`, {
+        const res = await fetch(endpoint, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ complete: shouldComplete }),
@@ -71,7 +105,7 @@ export default function BoardApp({ userName }: { userName: string }) {
       } catch {
         // Roll back on failure.
         mutate();
-        const reverted = { ...nextOverlay, [milestone.id]: current };
+        const reverted = { ...nextOverlay, [card.uid]: current };
         setOverlay(reverted);
         saveOverlay(reverted);
       }
@@ -86,8 +120,8 @@ export default function BoardApp({ userName }: { userName: string }) {
 
       <div className="flex min-h-0 flex-1">
         <RockFilter
-          rocks={rocks}
-          milestones={milestones}
+          rocks={groups}
+          cards={cards}
           activeRockIds={activeRockIds}
           onChange={setActiveRockIds}
         />
@@ -97,12 +131,12 @@ export default function BoardApp({ userName }: { userName: string }) {
             <ErrorState message={(error as Error).message} />
           ) : loading ? (
             <LoadingState />
-          ) : milestones.length === 0 ? (
+          ) : cards.length === 0 ? (
             <EmptyState />
           ) : (
             <Board
-              milestones={filtered}
-              rocks={rocks}
+              cards={filtered}
+              groups={groups}
               overlay={overlay}
               onMove={moveTo}
             />
@@ -116,7 +150,7 @@ export default function BoardApp({ userName }: { userName: string }) {
 function LoadingState() {
   return (
     <div className="flex h-full items-center justify-center text-sm text-slate-400">
-      Loading your milestones from Bloom Growth…
+      Loading your milestones and to-dos from Bloom Growth…
     </div>
   );
 }
@@ -126,8 +160,8 @@ function EmptyState() {
     <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
       <span className="text-3xl">🌱</span>
       <p className="text-sm text-slate-500">
-        No milestones found. Add milestones to your Rocks in Bloom Growth and
-        they&apos;ll appear here.
+        Nothing to show yet. Add milestones to your Rocks (or create to-dos) in
+        Bloom Growth and they&apos;ll appear here.
       </p>
     </div>
   );

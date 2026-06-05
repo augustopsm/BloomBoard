@@ -11,61 +11,67 @@ import {
 } from "@dnd-kit/core";
 import { useMemo, useState } from "react";
 import Column from "./Column";
-import MilestoneCard from "./MilestoneCard";
-import { COLUMNS, columnFor, type ColumnId } from "@/lib/board";
-import type { Milestone, Rock } from "@/lib/bloom/types";
+import Card from "./Card";
+import {
+  COLUMNS,
+  columnFor,
+  type BoardCard,
+  type ColumnId,
+} from "@/lib/board";
+import type { Rock } from "@/lib/bloom/types";
 
 export default function Board({
-  milestones,
-  rocks,
+  cards,
+  groups,
   overlay,
   onMove,
 }: {
-  milestones: Milestone[];
-  rocks: Rock[];
+  cards: BoardCard[];
+  groups: Rock[];
   overlay: Record<string, ColumnId>;
-  onMove: (milestone: Milestone, target: ColumnId) => void;
+  onMove: (card: BoardCard, target: ColumnId) => void;
 }) {
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeUid, setActiveUid] = useState<string | null>(null);
 
   // Require a small drag distance so clicks aren't swallowed.
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
   );
 
-  const rockName = useMemo(() => {
-    const map = new Map(rocks.map((r) => [r.id, r.name]));
-    return (id: string | null) => (id ? map.get(id) ?? "Unknown Rock" : "Unassigned");
-  }, [rocks]);
+  const groupName = useMemo(() => {
+    const map = new Map(groups.map((g) => [g.id, g.name]));
+    return (id: string | null) =>
+      id ? map.get(id) ?? "Unknown Rock" : "Unassigned";
+  }, [groups]);
 
   const byColumn = useMemo(() => {
-    const groups: Record<ColumnId, Milestone[]> = {
+    const cols: Record<ColumnId, BoardCard[]> = {
       todo: [],
       "in-progress": [],
       blocked: [],
       complete: [],
     };
-    for (const m of milestones) {
-      groups[columnFor(m, overlay)].push(m);
+    for (const c of cards) {
+      cols[columnFor(c, overlay)].push(c);
     }
-    return groups;
-  }, [milestones, overlay]);
+    return cols;
+  }, [cards, overlay]);
 
-  const activeMilestone = activeId
-    ? milestones.find((m) => m.id === activeId) ?? null
+  const activeCard = activeUid
+    ? cards.find((c) => c.uid === activeUid) ?? null
     : null;
 
   function handleDragStart(e: DragStartEvent) {
-    setActiveId(String(e.active.id));
+    setActiveUid(String(e.active.id));
   }
 
   function handleDragEnd(e: DragEndEvent) {
-    setActiveId(null);
+    setActiveUid(null);
     const { active, over } = e;
     if (!over) return;
     const target = String(over.id) as ColumnId;
-    const milestone = milestones.find((m) => m.id === String(active.id));
-    if (milestone) onMove(milestone, target);
+    const card = cards.find((c) => c.uid === String(active.id));
+    if (card) onMove(card, target);
   }
 
   return (
@@ -73,24 +79,24 @@ export default function Board({
       sensors={sensors}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      onDragCancel={() => setActiveId(null)}
+      onDragCancel={() => setActiveUid(null)}
     >
       <div className="scrollbar-thin flex h-full gap-4 overflow-x-auto pb-2">
         {COLUMNS.map((col) => (
           <Column
             key={col.id}
             column={col}
-            milestones={byColumn[col.id]}
-            rockName={rockName}
+            cards={byColumn[col.id]}
+            groupName={groupName}
           />
         ))}
       </div>
 
       <DragOverlay dropAnimation={null}>
-        {activeMilestone ? (
-          <MilestoneCard
-            milestone={activeMilestone}
-            rockName={rockName(activeMilestone.rockId)}
+        {activeCard ? (
+          <Card
+            card={activeCard}
+            groupName={groupName(activeCard.rockId)}
             dragging
           />
         ) : null}

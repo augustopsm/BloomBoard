@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import type { Milestone, Rock } from "@/lib/bloom/types";
+import type { Milestone, Rock, Todo } from "@/lib/bloom/types";
 
 async function fetcher<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -18,11 +18,11 @@ async function fetcher<T>(url: string): Promise<T> {
 }
 
 /**
- * Rocks and their nested milestones in a single request — the board's primary
- * data source.
+ * Rocks, their milestones, and standalone to-dos in a single request — the
+ * board's primary data source.
  */
 export function useBoard() {
-  return useSWR<{ rocks: Rock[]; milestones: Milestone[] }>(
+  return useSWR<{ rocks: Rock[]; milestones: Milestone[]; todos: Todo[] }>(
     "/api/board",
     fetcher,
   );

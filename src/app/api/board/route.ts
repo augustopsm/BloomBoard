@@ -1,14 +1,18 @@
 import { NextResponse } from "next/server";
 import { errorResponse, requireSession } from "@/lib/api-helpers";
-import { loadRocksAndMilestones } from "@/lib/bloom/service";
+import { getTodos, loadRocksAndMilestones } from "@/lib/bloom/service";
 
-// Rocks and their nested milestones come from one upstream call; expose them
-// together so the board only triggers a single round-trip.
+// The board's single data source: rocks + their milestones, plus standalone
+// to-dos (shown on the board under a synthetic "To-Dos" group).
 export async function GET() {
   const session = requireSession();
   if (session instanceof NextResponse) return session;
   try {
-    return NextResponse.json(await loadRocksAndMilestones(session.token));
+    const [{ rocks, milestones }, todos] = await Promise.all([
+      loadRocksAndMilestones(session.token),
+      getTodos(session.token),
+    ]);
+    return NextResponse.json({ rocks, milestones, todos });
   } catch (err) {
     return errorResponse(err);
   }

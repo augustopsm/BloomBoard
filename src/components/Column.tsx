@@ -1,18 +1,17 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import MilestoneCard from "./MilestoneCard";
-import type { ColumnDef } from "@/lib/board";
-import type { Milestone } from "@/lib/bloom/types";
+import Card from "./Card";
+import type { BoardCard, ColumnDef } from "@/lib/board";
 
 export default function Column({
   column,
-  milestones,
-  rockName,
+  cards,
+  groupName,
 }: {
   column: ColumnDef;
-  milestones: Milestone[];
-  rockName: (rockId: string | null) => string;
+  cards: BoardCard[];
+  groupName: (rockId: string | null) => string;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
@@ -25,7 +24,7 @@ export default function Column({
           >
             {column.title}
           </span>
-          <span className="text-xs text-slate-400">{milestones.length}</span>
+          <span className="text-xs text-slate-400">{cards.length}</span>
         </div>
       </div>
 
@@ -37,17 +36,13 @@ export default function Column({
             : "border-slate-200 bg-slate-100/50"
         }`}
       >
-        {milestones.length === 0 && (
+        {cards.length === 0 && (
           <p className="px-1 py-6 text-center text-xs text-slate-300">
             {column.description}
           </p>
         )}
-        {milestones.map((m) => (
-          <MilestoneCard
-            key={m.id}
-            milestone={m}
-            rockName={rockName(m.rockId)}
-          />
+        {cards.map((c) => (
+          <Card key={c.uid} card={c} groupName={groupName(c.rockId)} />
         ))}
       </div>
     </div>

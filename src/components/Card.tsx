@@ -2,25 +2,29 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
-import { colorForRock, formatDueDate, isOverdue } from "@/lib/board";
-import type { Milestone } from "@/lib/bloom/types";
+import {
+  colorForRock,
+  formatDueDate,
+  isOverdue,
+  type BoardCard,
+} from "@/lib/board";
 
-export default function MilestoneCard({
-  milestone,
-  rockName,
+export default function Card({
+  card,
+  groupName,
   dragging = false,
 }: {
-  milestone: Milestone;
-  rockName: string;
+  card: BoardCard;
+  groupName: string;
   /** True only for the floating DragOverlay clone. */
   dragging?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({ id: milestone.id });
+    useDraggable({ id: card.uid });
 
-  const due = formatDueDate(milestone.dueDate);
-  const overdue = isOverdue(milestone);
-  const accent = colorForRock(milestone.rockId);
+  const due = formatDueDate(card.dueDate);
+  const overdue = isOverdue(card);
+  const accent = colorForRock(card.rockId);
 
   return (
     <div
@@ -40,17 +44,23 @@ export default function MilestoneCard({
         />
         <p
           className={`text-sm leading-snug ${
-            milestone.complete ? "text-slate-400 line-through" : "text-slate-800"
+            card.complete ? "text-slate-400 line-through" : "text-slate-800"
           }`}
         >
-          {milestone.name}
+          {card.name}
         </p>
       </div>
 
       <div className="flex flex-wrap items-center gap-2 pl-[18px] text-xs">
-        <span className="truncate text-slate-400" title={rockName}>
-          {rockName}
-        </span>
+        {card.kind === "todo" ? (
+          <span className="rounded bg-cyan-50 px-1.5 py-0.5 font-medium text-cyan-700">
+            To-Do
+          </span>
+        ) : (
+          <span className="truncate text-slate-400" title={groupName}>
+            {groupName}
+          </span>
+        )}
 
         {due && (
           <span
@@ -66,13 +76,13 @@ export default function MilestoneCard({
         )}
       </div>
 
-      {milestone.owner && (
+      {card.owner && (
         <div className="mt-2 flex items-center gap-1.5 pl-[18px]">
           <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-600">
-            {initials(milestone.owner.name)}
+            {initials(card.owner.name)}
           </span>
           <span className="truncate text-xs text-slate-400">
-            {milestone.owner.name}
+            {card.owner.name}
           </span>
         </div>
       )}

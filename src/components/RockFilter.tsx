@@ -1,29 +1,29 @@
 "use client";
 
 import { useMemo } from "react";
-import { colorForRock } from "@/lib/board";
-import type { Milestone, Rock } from "@/lib/bloom/types";
+import { colorForRock, type BoardCard } from "@/lib/board";
+import type { Rock } from "@/lib/bloom/types";
 
 export default function RockFilter({
   rocks,
-  milestones,
+  cards,
   activeRockIds,
   onChange,
 }: {
   rocks: Rock[];
-  milestones: Milestone[];
+  cards: BoardCard[];
   activeRockIds: Set<string> | null;
   onChange: (ids: Set<string> | null) => void;
 }) {
-  // Count milestones per rock, including an "unassigned" bucket.
+  // Count cards per group, including an "unassigned" bucket.
   const counts = useMemo(() => {
     const map = new Map<string, number>();
-    for (const m of milestones) {
-      const key = m.rockId ?? "__none__";
+    for (const c of cards) {
+      const key = c.rockId ?? "__none__";
       map.set(key, (map.get(key) ?? 0) + 1);
     }
     return map;
-  }, [milestones]);
+  }, [cards]);
 
   const hasUnassigned = (counts.get("__none__") ?? 0) > 0;
 
@@ -100,7 +100,7 @@ export default function RockFilter({
       </div>
 
       <p className="border-t border-slate-100 px-4 py-3 text-[11px] leading-relaxed text-slate-400">
-        Each card is a milestone, colored by its parent Rock.
+        Cards are milestones (colored by their Rock) and standalone to-dos.
         Drag a card to <strong>Complete</strong> to mark it done in Bloom.
       </p>
     </aside>

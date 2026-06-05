@@ -20,7 +20,7 @@ Bloom itself, so BloomBoard flattens it into a board:
 | --- | --- |
 | **Rock** | A color + entry in the left sidebar. Click to filter. |
 | **Milestone** | A **card** on the board, colored by its parent Rock. |
-| **To-Do** | Available via `/api/todos` (board view planned). |
+| **To-Do** | A **card** on the board, grouped under a synthetic "To-Dos" lane (they have no parent Rock). |
 | **Issue (IDS)** | Available via `/api/issues` (board view planned). |
 
 ### The columns
@@ -124,7 +124,8 @@ contract — the one piece still being finalized).
 
 ## Roadmap
 
-- [ ] Dedicated boards/tabs for To-Dos and Issues (IDS)
+- [x] To-Dos on the board (synthetic "To-Dos" group)
+- [ ] Issues (IDS) on the board
 - [ ] Create / edit milestones from the board
 - [ ] Owner avatars from Bloom user images
 - [ ] Quarter / due-date filtering
