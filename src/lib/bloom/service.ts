@@ -51,7 +51,15 @@ export async function getMilestones(token: string): Promise<Milestone[]> {
 
 export async function getTodos(token: string): Promise<Todo[]> {
   const data = await bloomFetch(token, endpoints.myTodos);
-  return toArray(data).map(toTodo);
+  // TodoType enum: 0=Recurrence, 1=Personal, 2=Milestone.
+  // Milestone-typed todos are auto-created by Bloom when a milestone is
+  // un-completed and must not appear as standalone to-dos on the board.
+  return toArray(data)
+    .filter((raw) => {
+      const t = raw.TodoType ?? raw.todoType;
+      return t !== 2 && String(t).toLowerCase() !== "milestone";
+    })
+    .map(toTodo);
 }
 
 export async function getIssues(token: string): Promise<Issue[]> {
