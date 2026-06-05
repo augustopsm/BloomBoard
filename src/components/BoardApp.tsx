@@ -2,14 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Board from "./Board";
-import Header from "./Header";
+import Header, { type AppView } from "./Header";
+import IssuesView from "./IssuesView";
 import RockFilter from "./RockFilter";
 import { useBoard } from "@/hooks/useBloomData";
 import {
   columnFor,
-  issueToCard,
-  ISSUE_GROUP_ID,
-  ISSUE_GROUP_NAME,
   loadOverlay,
   milestoneToCard,
   saveOverlay,
@@ -24,76 +22,60 @@ import type { Rock } from "@/lib/bloom/types";
 export default function BoardApp({ userName }: { userName: string }) {
   const { data, error, isLoading, mutate } = useBoard();
 
+  const [view, setView] = useState<AppView>("board");
   const [overlay, setOverlay] = useState<Record<string, ColumnId>>({});
   const [activeRockIds, setActiveRockIds] = useState<Set<string> | null>(null);
   const [query, setQuery] = useState("");
 
-  // Hydrate the local stage overlay once on mount.
   useEffect(() => setOverlay(loadOverlay()), []);
 
   const rocks: Rock[] = useMemo(() => data?.rocks ?? [], [data]);
 
-  // Milestones + to-dos + issues unified into board cards.
+  // Board cards: milestones + to-dos only (issues have their own view)
   const cards: BoardCard[] = useMemo(() => {
     const ms = (data?.milestones ?? []).map(milestoneToCard);
     const td = (data?.todos ?? []).map(todoToCard);
-    const is = (data?.issues ?? []).map(issueToCard);
-    return [...ms, ...td, ...is];
+    return [...ms, ...td];
   }, [data]);
 
   const hasTodos = (data?.todos?.length ?? 0) > 0;
-  const hasIssues = (data?.issues?.length ?? 0) > 0;
 
   const groups: Rock[] = useMemo(() => {
-    const extras: Rock[] = [];
-    if (hasTodos) {
-      extras.push({
+    if (!hasTodos) return rocks;
+    return [
+      ...rocks,
+      {
         id: TODO_GROUP_ID,
         name: TODO_GROUP_NAME,
-        status: "incomplete",
+        status: "incomplete" as const,
         dueDate: null,
         owner: null,
         completion: 0,
-      });
-    }
-    if (hasIssues) {
-      extras.push({
-        id: ISSUE_GROUP_ID,
-        name: ISSUE_GROUP_NAME,
-        status: "incomplete",
-        dueDate: null,
-        owner: null,
-        completion: 0,
-      });
-    }
-    return [...rocks, ...extras];
-  }, [rocks, hasTodos, hasIssues]);
+      },
+    ];
+  }, [rocks, hasTodos]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return cards.filter((c) => {
-      if (activeRockIds && !activeRockIds.has(c.rockId ?? "__none__")) {
-        return false;
-      }
+      if (activeRockIds && !activeRockIds.has(c.rockId ?? "__none__")) return false;
       if (q && !c.name.toLowerCase().includes(q)) return false;
       return true;
     });
   }, [cards, activeRockIds, query]);
 
-  /** Move a card to a column — sync completion to Bloom, persist overlay. */
+  /** Move a board card to a column — syncs completion to Bloom, persists overlay. */
   async function moveTo(card: BoardCard, target: ColumnId) {
     const current = columnFor(card, overlay);
     if (current === target) return;
 
-    // Update the local overlay immediately for snappy UX.
     const nextOverlay = { ...overlay, [card.uid]: target };
     setOverlay(nextOverlay);
     saveOverlay(nextOverlay);
 
     const shouldComplete = target === "complete";
     if (shouldComplete !== card.complete) {
-      const listKey =
-        card.kind === "todo" ? "todos" : card.kind === "issue" ? "issues" : "milestones";
+      const listKey = card.kind === "todo" ? "todos" : "milestones";
       mutate(
         (prev) =>
           prev && {
@@ -108,9 +90,7 @@ export default function BoardApp({ userName }: { userName: string }) {
       const endpoint =
         card.kind === "todo"
           ? `/api/todos/${card.id}`
-          : card.kind === "issue"
-            ? `/api/issues/${card.id}`
-            : `/api/milestones/${card.id}`;
+          : `/api/milestones/${card.id}`;
       try {
         const res = await fetch(endpoint, {
           method: "PATCH",
@@ -127,25 +107,61 @@ export default function BoardApp({ userName }: { userName: string }) {
     }
   }
 
+  /** Toggle an issue's solved/open state — writes to Bloom optimistically. */
+  async function toggleIssue(id: string, complete: boolean) {
+    mutate(
+      (prev) =>
+        prev && {
+          ...prev,
+          issues: prev.issues.map((i) =>
+            i.id === id ? { ...i, complete } : i,
+          ),
+        },
+      { revalidate: false },
+    );
+
+    try {
+      const res = await fetch(`/api/issues/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ complete }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      mutate();
+    }
+  }
+
   const loading = isLoading;
+  const issues = data?.issues ?? [];
 
   return (
     <div className="flex h-screen flex-col bg-[#0f0f11]">
-      <Header userName={userName} query={query} onQueryChange={setQuery} />
+      <Header
+        userName={userName}
+        query={query}
+        onQueryChange={setQuery}
+        view={view}
+        onViewChange={setView}
+      />
 
       <div className="flex min-h-0 flex-1">
-        <RockFilter
-          rocks={groups}
-          cards={cards}
-          activeRockIds={activeRockIds}
-          onChange={setActiveRockIds}
-        />
+        {view === "board" && (
+          <RockFilter
+            rocks={groups}
+            cards={cards}
+            activeRockIds={activeRockIds}
+            onChange={setActiveRockIds}
+          />
+        )}
 
         <main className="min-w-0 flex-1 overflow-hidden p-4">
           {error ? (
             <ErrorState message={(error as Error).message} />
           ) : loading ? (
             <LoadingState />
+          ) : view === "issues" ? (
+            <IssuesView issues={issues} onToggle={toggleIssue} />
           ) : cards.length === 0 ? (
             <EmptyState />
           ) : (
@@ -186,7 +202,8 @@ function ErrorState({ message }: { message: string }) {
     <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
       <p className="max-w-md text-sm text-rose-400">{message}</p>
       <p className="max-w-md text-xs text-zinc-600">
-        If this is a 404, check <code className="text-zinc-500">src/lib/bloom/endpoints.ts</code>.
+        If this is a 404, check{" "}
+        <code className="text-zinc-500">src/lib/bloom/endpoints.ts</code>.
       </p>
     </div>
   );
