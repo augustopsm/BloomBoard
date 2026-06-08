@@ -201,7 +201,7 @@ export default function BoardApp({ userName }: { userName: string }) {
           )}
         </main>
 
-        <KPIDrawer />
+        <KPIDrawer cards={cards} overlay={overlay} />
       </div>
 
       <DetailDrawer

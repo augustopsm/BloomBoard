@@ -1,28 +1,47 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { KPIMetric } from "@/app/api/kpis/route";
+import { useMemo, useState } from "react";
+import { columnFor, isOverdue, type BoardCard, type ColumnId } from "@/lib/board";
 
-export default function KPIDrawer() {
+const COLUMNS: { id: ColumnId; label: string; color: string }[] = [
+  { id: "todo",        label: "To Do",       color: "bg-zinc-500" },
+  { id: "in-progress", label: "In Progress", color: "bg-blue-400" },
+  { id: "blocked",     label: "Blocked",     color: "bg-amber-400" },
+  { id: "complete",    label: "Complete",    color: "bg-emerald-400" },
+];
+
+const KINDS: { id: BoardCard["kind"]; label: string; color: string }[] = [
+  { id: "milestone", label: "Milestones", color: "bg-orange-400" },
+  { id: "todo",      label: "To-Dos",     color: "bg-cyan-400" },
+  { id: "issue",     label: "Issues",     color: "bg-violet-400" },
+];
+
+export default function KPIDrawer({
+  cards,
+  overlay,
+}: {
+  cards: BoardCard[];
+  overlay: Record<string, ColumnId>;
+}) {
   const [open, setOpen] = useState(false);
-  const [metrics, setMetrics] = useState<KPIMetric[]>([]);
-  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
 
-  useEffect(() => {
-    if (!open || status !== "idle") return;
-    setStatus("loading");
-    fetch("/api/kpis")
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data) => {
-        setMetrics(Array.isArray(data) ? data : []);
-        setStatus("done");
-      })
-      .catch(() => setStatus("error"));
-  }, [open, status]);
+  const stats = useMemo(() => {
+    const total = cards.length;
+    const byColumn = Object.fromEntries(
+      COLUMNS.map((c) => [c.id, cards.filter((card) => columnFor(card, overlay) === c.id).length]),
+    ) as Record<ColumnId, number>;
+    const byKind = Object.fromEntries(
+      KINDS.map((k) => [k.id, cards.filter((c) => c.kind === k.id).length]),
+    ) as Record<BoardCard["kind"], number>;
+    const overdue = cards.filter((c) => isOverdue(c)).length;
+    const completionPct = total > 0 ? Math.round((byColumn.complete / total) * 100) : 0;
+
+    return { total, byColumn, byKind, overdue, completionPct };
+  }, [cards, overlay]);
 
   return (
     <div className="relative flex h-full shrink-0">
-      {/* Expanded drawer panel */}
+      {/* Expanded drawer */}
       <div
         className={`flex h-full flex-col border-l border-white/[0.07] bg-[#151517] transition-all duration-300 ${
           open ? "w-72 opacity-100" : "w-0 overflow-hidden opacity-0"
@@ -33,12 +52,12 @@ export default function KPIDrawer() {
             <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-3.5">
               <div className="flex items-center gap-2">
                 <ChartIcon />
-                <span className="text-[13px] font-semibold text-zinc-200">Current KPIs</span>
+                <span className="text-[13px] font-semibold text-zinc-200">Board KPIs</span>
               </div>
               <button
                 onClick={() => setOpen(false)}
                 className="rounded p-1 text-zinc-500 transition hover:bg-white/[0.06] hover:text-zinc-300"
-                aria-label="Close KPIs"
+                aria-label="Close"
               >
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                   <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -46,36 +65,48 @@ export default function KPIDrawer() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-4 py-4">
-              {status === "loading" && (
-                <div className="space-y-3">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="h-14 animate-pulse rounded-lg bg-white/[0.04]" />
-                  ))}
-                </div>
-              )}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
 
-              {status === "error" && (
-                <p className="text-[12px] text-zinc-600">Could not load KPIs.</p>
-              )}
+              {/* Summary */}
+              <div className="grid grid-cols-2 gap-2">
+                <StatCard label="Total items" value={stats.total} />
+                <StatCard label="Complete" value={`${stats.completionPct}%`} highlight={stats.completionPct >= 50} />
+                <StatCard label="Overdue" value={stats.overdue} warn={stats.overdue > 0} />
+                <StatCard label="Blocked" value={stats.byColumn.blocked} warn={stats.byColumn.blocked > 0} />
+              </div>
 
-              {status === "done" && metrics.length === 0 && (
-                <p className="text-[12px] text-zinc-600">No scorecard metrics found.</p>
-              )}
+              {/* By column */}
+              <Section title="By Column">
+                {COLUMNS.map((col) => (
+                  <BarRow
+                    key={col.id}
+                    label={col.label}
+                    value={stats.byColumn[col.id]}
+                    total={stats.total}
+                    color={col.color}
+                  />
+                ))}
+              </Section>
 
-              {status === "done" && metrics.length > 0 && (
-                <ul className="space-y-2">
-                  {metrics.map((m) => (
-                    <MetricRow key={m.id} metric={m} />
-                  ))}
-                </ul>
-              )}
+              {/* By type */}
+              <Section title="By Type">
+                {KINDS.map((k) => (
+                  <BarRow
+                    key={k.id}
+                    label={k.label}
+                    value={stats.byKind[k.id]}
+                    total={stats.total}
+                    color={k.color}
+                  />
+                ))}
+              </Section>
+
             </div>
           </>
         )}
       </div>
 
-      {/* Collapsed tab — always visible */}
+      {/* Collapsed tab */}
       <button
         onClick={() => setOpen((v) => !v)}
         aria-label={open ? "Close KPIs" : "Open KPIs"}
@@ -102,57 +133,57 @@ export default function KPIDrawer() {
   );
 }
 
-function MetricRow({ metric }: { metric: KPIMetric }) {
-  const fmt = (n: number | null) => {
-    if (n === null) return "—";
-    return n.toLocaleString();
-  };
-
-  const trackColor =
-    metric.onTrack === true
-      ? "text-emerald-400"
-      : metric.onTrack === false
-        ? "text-rose-400"
-        : "text-zinc-600";
-
-  const trackLabel =
-    metric.onTrack === true ? "On track" : metric.onTrack === false ? "Off track" : null;
-
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <li className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
-      <p className="mb-1.5 truncate text-[11px] font-medium text-zinc-400" title={metric.title}>
-        {metric.title}
-      </p>
-      <div className="flex items-end justify-between gap-2">
-        <span className="text-[20px] font-semibold leading-none text-zinc-100">
-          {fmt(metric.value)}
-          {metric.unit && (
-            <span className="ml-0.5 text-[11px] font-normal text-zinc-500">{metric.unit}</span>
-          )}
-        </span>
-        {metric.goal !== null && (
-          <span className="text-[10px] text-zinc-600">
-            Goal: {fmt(metric.goal)}
-          </span>
-        )}
+    <div>
+      <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-600">{title}</p>
+      <div className="space-y-2">{children}</div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, highlight, warn }: {
+  label: string;
+  value: number | string;
+  highlight?: boolean;
+  warn?: boolean;
+}) {
+  const valueColor = warn ? "text-amber-400" : highlight ? "text-emerald-400" : "text-zinc-100";
+  return (
+    <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+      <p className="text-[10px] text-zinc-600 mb-0.5">{label}</p>
+      <p className={`text-[22px] font-semibold leading-none ${valueColor}`}>{value}</p>
+    </div>
+  );
+}
+
+function BarRow({ label, value, total, color }: {
+  label: string;
+  value: number;
+  total: number;
+  color: string;
+}) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-[11px]">
+        <span className="text-zinc-400">{label}</span>
+        <span className="text-zinc-500">{value} <span className="text-zinc-700">· {pct}%</span></span>
       </div>
-      {trackLabel && (
-        <p className={`mt-1 text-[10px] font-medium ${trackColor}`}>{trackLabel}</p>
-      )}
-    </li>
+      <div className="h-1 w-full overflow-hidden rounded-full bg-white/[0.06]">
+        <div
+          className={`h-full rounded-full ${color} opacity-70 transition-all duration-500`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
   );
 }
 
 function ChartIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M2 12l4-4 3 3 4-5"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <path d="M2 12l4-4 3 3 4-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M2 14h12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
     </svg>
   );
