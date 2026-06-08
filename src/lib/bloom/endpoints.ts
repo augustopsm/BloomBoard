@@ -64,6 +64,9 @@ export const endpoints = {
   /** All attendees of an L10 meeting — used to discover team members. */
   meetingAttendees: (meetingId: string | number) =>
     `/api/v1/L10/${meetingId}/attendees`,
+  /** All open to-dos for an L10 meeting (all owners). */
+  meetingTodos: (meetingId: string | number) =>
+    `/api/v1/L10/${meetingId}/todos`,
 
   // Notes / details pads. Each returns a { URL } pointing at the note's
   // HTML content (no plain-text field exists on the entities themselves).

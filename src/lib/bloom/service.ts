@@ -149,11 +149,37 @@ export async function loadRocksAndMilestonesForUser(
 }
 
 export async function getTodosForUser(token: string, userId: string): Promise<Todo[]> {
-  const data = await bloomFetch(token, endpoints.todosForUser(userId));
+  // Try the direct per-user endpoint first. Bloom may reject it for users other
+  // than yourself (returns 400/403), in which case we fall back to fetching all
+  // meeting todos and filtering by owner — the meeting endpoint is always open.
+  try {
+    const data = await bloomFetch(token, endpoints.todosForUser(userId));
+    const rows = toArray(data).filter((raw) => {
+      const t = raw.TodoType ?? raw.todoType;
+      return t !== 2 && String(t).toLowerCase() !== "milestone";
+    });
+    if (rows.length > 0) return rows.map(toTodo);
+    // A 200 with 0 results is ambiguous (user truly has none, or Bloom silently
+    // rejected the cross-user lookup). Fall through to the meeting endpoint to
+    // confirm — if that also returns 0 we'll accept the empty result.
+  } catch {
+    // Fall through
+  }
+
+  const meetingId = process.env.BLOOM_MEETING_ID ?? "215896";
+  const data = await bloomFetch(token, endpoints.meetingTodos(meetingId));
   return toArray(data)
     .filter((raw) => {
       const t = raw.TodoType ?? raw.todoType;
-      return t !== 2 && String(t).toLowerCase() !== "milestone";
+      if (t === 2 || String(t).toLowerCase() === "milestone") return false;
+      const owner = raw.Owner ?? raw.owner;
+      if (!owner || typeof owner !== "object") return false;
+      const ownerId = String(
+        (owner as Record<string, unknown>).Id ??
+        (owner as Record<string, unknown>).id ??
+        "",
+      );
+      return ownerId === userId;
     })
     .map(toTodo);
 }
