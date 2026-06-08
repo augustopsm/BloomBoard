@@ -103,9 +103,14 @@ export default function Card({
             Issue
           </span>
         ) : (
-          <span className="truncate text-zinc-600" title={groupName}>
-            {groupName}
-          </span>
+          <>
+            <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 font-medium text-emerald-400">
+              Milestone
+            </span>
+            <span className="truncate text-zinc-600" title={groupName}>
+              {groupName}
+            </span>
+          </>
         )}
 
         {due && (
