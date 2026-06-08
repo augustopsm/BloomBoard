@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Board from "./Board";
+import KPIDrawer from "./KPIDrawer";
 import DetailDrawer, {
   detailFromCard,
   detailFromRock,
@@ -199,6 +200,8 @@ export default function BoardApp({ userName }: { userName: string }) {
             />
           )}
         </main>
+
+        <KPIDrawer />
       </div>
 
       <DetailDrawer

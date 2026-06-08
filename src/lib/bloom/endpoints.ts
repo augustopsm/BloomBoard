@@ -49,6 +49,9 @@ export const endpoints = {
   issue: (id: string) => `/api/v1/issues/${id}`,
   issueComplete: (id: string) => `/api/v1/issues/${id}/complete`,
 
+  /** The current user's scorecard (KPI metrics). */
+  myScorecard: "/api/v1/scorecard/user/mine",
+
   // Notes / details pads. Each returns a { URL } pointing at the note's
   // HTML content (no plain-text field exists on the entities themselves).
   notesForTodo: (id: string) => `/api/v1/todo/notes/${id}`,
