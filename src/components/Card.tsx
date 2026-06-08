@@ -191,7 +191,7 @@ function AsanaButton({
       className={`${base} ${
         state === "error"
           ? "bg-rose-500/10 text-rose-400"
-          : "bg-white/[0.04] text-zinc-500 opacity-0 hover:bg-white/[0.1] hover:text-zinc-200 group-hover:opacity-100"
+          : "bg-white/[0.06] text-zinc-400 hover:bg-white/[0.12] hover:text-zinc-100"
       }`}
     >
       {state === "creating"
