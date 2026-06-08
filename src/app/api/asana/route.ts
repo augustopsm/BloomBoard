@@ -68,7 +68,7 @@ export async function POST(req: Request) {
       notes: lines.join("\n"),
       dueDate: body.dueDate,
     });
-    return NextResponse.json({ ok: true, url: task.url });
+    return NextResponse.json({ ok: true, gid: task.gid, url: task.url });
   } catch (err) {
     if (err instanceof AsanaError) {
       return NextResponse.json({ error: err.message }, { status: err.status });

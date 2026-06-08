@@ -40,6 +40,52 @@ export interface CreatedTask {
   url: string;
 }
 
+export interface AsanaSection {
+  gid: string;
+  name: string;
+}
+
+/** Fetch all sections in the configured project. Throws AsanaError on failure. */
+export async function getProjectSections(): Promise<AsanaSection[]> {
+  const token = process.env.ASANA_ACCESS_TOKEN;
+  const projectId = process.env.ASANA_PROJECT_ID;
+  if (!token || !projectId) throw new AsanaError("Asana is not configured on the server.", 503);
+
+  const res = await fetch(
+    `${ASANA_BASE}/projects/${projectId}/sections?opt_fields=gid,name`,
+    {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new AsanaError(`Could not fetch Asana sections (${res.status}). ${body.slice(0, 200)}`, res.status);
+  }
+  const json = (await res.json()) as { data?: { gid: string; name: string }[] };
+  return (json.data ?? []).map((s) => ({ gid: s.gid, name: s.name }));
+}
+
+/** Move a task into a section (adds task to the section within its project). */
+export async function moveTaskToSection(taskGid: string, sectionGid: string): Promise<void> {
+  const token = process.env.ASANA_ACCESS_TOKEN;
+  if (!token) throw new AsanaError("Asana is not configured on the server.", 503);
+
+  const res = await fetch(`${ASANA_BASE}/sections/${sectionGid}/addTask`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ data: { task: taskGid } }),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new AsanaError(`Could not move Asana task (${res.status}). ${body.slice(0, 200)}`, res.status);
+  }
+}
+
 /** Create a task in the configured Asana project/workspace. */
 export async function createAsanaTask(
   input: CreateTaskInput,

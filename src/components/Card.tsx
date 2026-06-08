@@ -7,6 +7,8 @@ import {
   colorForRock,
   formatDueDate,
   isOverdue,
+  loadAsanaTasks,
+  saveAsanaTask,
   type BoardCard,
 } from "@/lib/board";
 
@@ -28,8 +30,9 @@ export default function Card({
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: card.uid });
 
-  const [asana, setAsana] = useState<AsanaState>("idle");
-  const [asanaUrl, setAsanaUrl] = useState<string | null>(null);
+  const stored = loadAsanaTasks()[card.uid] ?? null;
+  const [asana, setAsana] = useState<AsanaState>(stored ? "done" : "idle");
+  const [asanaUrl, setAsanaUrl] = useState<string | null>(stored?.url ?? null);
 
   const due = formatDueDate(card.dueDate);
   const overdue = isOverdue(card);
@@ -57,7 +60,10 @@ export default function Card({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Failed");
-      setAsanaUrl(typeof data.url === "string" && data.url ? data.url : null);
+      const url = typeof data.url === "string" && data.url ? data.url : null;
+      const gid = typeof data.gid === "string" && data.gid ? data.gid : null;
+      if (gid) saveAsanaTask(card.uid, { gid, url: url ?? "" });
+      setAsanaUrl(url);
       setAsana("done");
     } catch {
       setAsana("error");

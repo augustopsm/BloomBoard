@@ -189,6 +189,31 @@ export function colorForRock(rockId: string | null): string {
   return ROCK_PALETTE[hash % ROCK_PALETTE.length];
 }
 
+const ASANA_TASKS_KEY = "bloomboard.asana.tasks";
+
+export interface AsanaTaskRecord {
+  gid: string;
+  url: string;
+}
+
+type AsanaTaskStore = Record<string, AsanaTaskRecord>;
+
+export function loadAsanaTasks(): AsanaTaskStore {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(ASANA_TASKS_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
+}
+
+export function saveAsanaTask(cardUid: string, record: AsanaTaskRecord): void {
+  if (typeof window === "undefined") return;
+  const store = loadAsanaTasks();
+  store[cardUid] = record;
+  localStorage.setItem(ASANA_TASKS_KEY, JSON.stringify(store));
+}
+
 export function isOverdue(card: BoardCard): boolean {
   if (card.complete || !card.dueDate) return false;
   return new Date(card.dueDate).getTime() < Date.now();

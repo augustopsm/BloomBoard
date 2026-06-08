@@ -15,6 +15,7 @@ import {
   issueToCard,
   ISSUE_GROUP_ID,
   ISSUE_GROUP_NAME,
+  loadAsanaTasks,
   loadOverlay,
   milestoneToCard,
   saveOverlay,
@@ -99,6 +100,17 @@ export default function BoardApp({ userName }: { userName: string }) {
     });
   }, [cards, activeRockIds, query]);
 
+  /** Silently move the card's Asana task to the matching section (best-effort). */
+  function syncAsanaColumn(card: BoardCard, target: ColumnId) {
+    const task = loadAsanaTasks()[card.uid];
+    if (!task?.gid) return;
+    fetch("/api/asana/move", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskGid: task.gid, column: target }),
+    }).catch(() => {});
+  }
+
   /** Move a board card to a column — syncs completion to Bloom, persists overlay. */
   async function moveTo(card: BoardCard, target: ColumnId) {
     const current = columnFor(card, overlay);
@@ -107,6 +119,7 @@ export default function BoardApp({ userName }: { userName: string }) {
     const nextOverlay = { ...overlay, [card.uid]: target };
     setOverlay(nextOverlay);
     saveOverlay(nextOverlay);
+    syncAsanaColumn(card, target);
 
     const shouldComplete = target === "complete";
     if (shouldComplete !== card.complete) {
