@@ -48,18 +48,7 @@ export default function KPIDrawer({
       return { id: rock.id, name: rock.name, total: rockCards.length, done, pct };
     }).filter((r) => r.total > 0);
 
-    // By meeting
-    const meetingMap = new Map<string, number>();
-    for (const card of cards) {
-      if (card.meeting) {
-        meetingMap.set(card.meeting, (meetingMap.get(card.meeting) ?? 0) + 1);
-      }
-    }
-    const byMeeting = Array.from(meetingMap.entries())
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count);
-
-    return { total, byColumn, byKind, overdue, completionPct, byRock, byMeeting };
+    return { total, byColumn, byKind, overdue, completionPct, byRock };
   }, [cards, overlay, groups]);
 
   return (
@@ -133,22 +122,8 @@ export default function KPIDrawer({
                 </Section>
               )}
 
-              {/* By meeting */}
-              {stats.byMeeting.length > 0 && (
-                <Section title="By Meeting">
-                  {stats.byMeeting.map((m) => (
-                    <BarRow
-                      key={m.name}
-                      label={m.name}
-                      value={m.count}
-                      total={stats.total}
-                      color="bg-zinc-400"
-                    />
-                  ))}
-                </Section>
-              )}
 
-            </div>
+</div>
           </>
         )}
       </div>
