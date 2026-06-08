@@ -43,6 +43,7 @@ export function detailFromCard(card: BoardCard, groupName: string): DetailItem {
   if (card.kind === "milestone") {
     rows.push({ label: "Rock", value: groupName });
   }
+  if (card.meeting) rows.push({ label: "Meeting", value: card.meeting });
   if (card.context) rows.push({ label: "Context", value: card.context });
   if (card.kind === "issue") {
     if (card.fromWhere) rows.push({ label: "From", value: card.fromWhere });
