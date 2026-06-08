@@ -118,13 +118,18 @@ export function toRock(raw: Raw): Rock {
 }
 
 /**
- * Milestone completion is a string `Status` ("Done"). Anything that reads as
- * done/complete counts as complete; other values (e.g. "OnTrack") do not. A
+ * Milestone completion is a string `Status` ("Done" / "NotDone"). Only an
+ * explicit done/complete state counts — note "NotDone" contains the substring
+ * "done", so we must rule out negated forms before matching. A
  * `Complete`/`Done` boolean is honored too, for forward-compatibility.
  */
 function milestoneComplete(raw: Raw): boolean {
-  const status = asString(pick(raw, "Status", "status"))?.toLowerCase();
-  if (status) return status.includes("done") || status.includes("complete");
+  const status = asString(pick(raw, "Status", "status"))?.toLowerCase().trim();
+  if (status) {
+    // Negated states first: "notdone", "not done", "incomplete", "undone".
+    if (/\bnot\b|^not|incomplete|undone|notdone/.test(status)) return false;
+    return status.includes("done") || status.includes("complete");
+  }
   return asBool(pick(raw, "Complete", "complete", "Completed", "Done"));
 }
 
