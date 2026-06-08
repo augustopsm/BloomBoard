@@ -47,7 +47,15 @@ export default function BoardApp({
 
   useEffect(() => setOverlay(loadOverlay()), []);
 
-  const rocks: Rock[] = useMemo(() => data?.rocks ?? [], [data]);
+  // Only rocks that actually have at least one milestone are shown. Empty
+  // rocks (no milestones for the viewed user/meeting) just clutter the sidebar
+  // and KPIs without producing any cards on the board.
+  const rocks: Rock[] = useMemo(() => {
+    const rockIdsWithMilestones = new Set(
+      (data?.milestones ?? []).map((m) => m.rockId).filter(Boolean),
+    );
+    return (data?.rocks ?? []).filter((r) => rockIdsWithMilestones.has(r.id));
+  }, [data]);
 
   // Board cards: milestones + to-dos + issues, unified.
   const cards: BoardCard[] = useMemo(() => {
