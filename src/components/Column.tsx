@@ -20,7 +20,7 @@ export default function Column({
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
   return (
-    <div className="flex w-[272px] shrink-0 flex-col">
+    <div className="flex w-[272px] shrink-0 flex-col sm:w-[300px] lg:w-[340px] xl:w-[380px] 2xl:w-[420px]">
       <div className="mb-2 flex items-center gap-2.5 px-1">
         <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold tracking-wide ${column.accent}`}>
           {column.title}
