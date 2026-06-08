@@ -19,16 +19,32 @@ export async function loadRocksAndMilestones(
   token: string,
 ): Promise<{ rocks: Rock[]; milestones: Milestone[] }> {
   const rocks = toArray(await bloomFetch(token, endpoints.myRocks)).map(toRock);
+  return attachMilestones(token, rocks);
+}
 
+/**
+ * Fetch each rock's milestones and derive rock completion. Per-rock fetches are
+ * best-effort: a rock that 400s/404s (Bloom rejects some rocks, e.g. archived
+ * or cross-team ones) contributes no milestones rather than failing the board.
+ */
+async function attachMilestones(
+  token: string,
+  rocks: Rock[],
+): Promise<{ rocks: Rock[]; milestones: Milestone[] }> {
   const milestonesByRock = await Promise.all(
     rocks.map(async (rock) => {
-      const raw = toArray(
-        await bloomFetch(token, endpoints.milestonesForRock(rock.id)),
-      );
-      // Stamp the parent rock id in case a milestone omits its own RockId.
-      return raw
-        .map(toMilestone)
-        .map((m) => ({ ...m, rockId: m.rockId ?? rock.id }));
+      try {
+        const raw = toArray(
+          await bloomFetch(token, endpoints.milestonesForRock(rock.id)),
+        );
+        // Stamp the parent rock id in case a milestone omits its own RockId.
+        return raw
+          .map(toMilestone)
+          .map((m) => ({ ...m, rockId: m.rockId ?? rock.id }));
+      } catch (err) {
+        console.error(`[board] milestones for rock ${rock.id} failed:`, err);
+        return [] as Milestone[];
+      }
     }),
   );
 
@@ -129,27 +145,7 @@ export async function loadRocksAndMilestonesForUser(
   userId: string,
 ): Promise<{ rocks: Rock[]; milestones: Milestone[] }> {
   const rocks = toArray(await bloomFetch(token, endpoints.rocksForUser(userId))).map(toRock);
-
-  const milestonesByRock = await Promise.all(
-    rocks.map(async (rock) => {
-      const raw = toArray(
-        await bloomFetch(token, endpoints.milestonesForRock(rock.id)),
-      );
-      return raw
-        .map(toMilestone)
-        .map((m) => ({ ...m, rockId: m.rockId ?? rock.id }));
-    }),
-  );
-
-  rocks.forEach((rock, i) => {
-    const ms = milestonesByRock[i];
-    if (ms.length > 0) {
-      const done = ms.filter((m) => m.complete).length;
-      rock.completion = Math.round((done / ms.length) * 100);
-    }
-  });
-
-  return { rocks, milestones: milestonesByRock.flat() };
+  return attachMilestones(token, rocks);
 }
 
 export async function getTodosForUser(token: string, userId: string): Promise<Todo[]> {
