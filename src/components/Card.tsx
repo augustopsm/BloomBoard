@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -9,23 +10,58 @@ import {
   type BoardCard,
 } from "@/lib/board";
 
+type AsanaState = "idle" | "creating" | "done" | "error";
+
 export default function Card({
   card,
   groupName,
   dragging = false,
   onOpen,
+  asanaEnabled = false,
 }: {
   card: BoardCard;
   groupName: string;
   dragging?: boolean;
   onOpen?: () => void;
+  asanaEnabled?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } =
     useDraggable({ id: card.uid });
 
+  const [asana, setAsana] = useState<AsanaState>("idle");
+  const [asanaUrl, setAsanaUrl] = useState<string | null>(null);
+
   const due = formatDueDate(card.dueDate);
   const overdue = isOverdue(card);
   const accent = colorForRock(card.rockId);
+
+  async function createAsanaTask() {
+    if (asana === "creating") return;
+    setAsana("creating");
+    try {
+      const res = await fetch("/api/asana", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: card.kind,
+          name: card.name,
+          // Rock name is only meaningful for milestones (todos/issues use a
+          // synthetic group name we don't want to send as a rock).
+          rockName: card.kind === "milestone" ? groupName : null,
+          ownerName: card.owner?.name ?? null,
+          dueDate: card.dueDate,
+          bloomUrl: card.detailsUrl ?? null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      setAsanaUrl(typeof data.url === "string" && data.url ? data.url : null);
+      setAsana("done");
+    } catch {
+      setAsana("error");
+      setTimeout(() => setAsana("idle"), 2500);
+    }
+  }
 
   return (
     <div
@@ -84,17 +120,86 @@ export default function Card({
         )}
       </div>
 
-      {card.owner && (
-        <div className="mt-2 flex items-center gap-1.5 pl-4">
-          <span className="flex h-4.5 w-4.5 h-[18px] w-[18px] items-center justify-center rounded-full bg-zinc-700 text-[9px] font-semibold text-zinc-300">
-            {initials(card.owner.name)}
-          </span>
-          <span className="truncate text-[11px] text-zinc-600">
-            {card.owner.name}
-          </span>
-        </div>
+      {(card.owner || (asanaEnabled && !dragging)) && (
+      <div className="mt-2 flex items-center gap-1.5 pl-4">
+        {card.owner && (
+          <>
+            <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-zinc-700 text-[9px] font-semibold text-zinc-300">
+              {initials(card.owner.name)}
+            </span>
+            <span className="truncate text-[11px] text-zinc-600">
+              {card.owner.name}
+            </span>
+          </>
+        )}
+
+        {!dragging && asanaEnabled && (
+          <AsanaButton
+            state={asana}
+            url={asanaUrl}
+            onCreate={(e) => {
+              e.stopPropagation();
+              createAsanaTask();
+            }}
+            onPointerDownCapture={(e) => e.stopPropagation()}
+          />
+        )}
+      </div>
       )}
     </div>
+  );
+}
+
+function AsanaButton({
+  state,
+  url,
+  onCreate,
+  onPointerDownCapture,
+}: {
+  state: AsanaState;
+  url: string | null;
+  onCreate: (e: React.MouseEvent) => void;
+  onPointerDownCapture: (e: React.PointerEvent) => void;
+}) {
+  const base =
+    "ml-auto rounded px-1.5 py-0.5 text-[10px] font-medium transition";
+
+  if (state === "done") {
+    const label = "✓ Asana";
+    return url ? (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDownCapture={onPointerDownCapture}
+        className={`${base} bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20`}
+      >
+        {label}
+      </a>
+    ) : (
+      <span className={`${base} bg-emerald-500/10 text-emerald-400`}>{label}</span>
+    );
+  }
+
+  return (
+    <button
+      onClick={onCreate}
+      onPointerDownCapture={onPointerDownCapture}
+      disabled={state === "creating"}
+      title="Create an Asana task from this card"
+      className={`${base} ${
+        state === "error"
+          ? "bg-rose-500/10 text-rose-400"
+          : "bg-white/[0.04] text-zinc-500 opacity-0 hover:bg-white/[0.1] hover:text-zinc-200 group-hover:opacity-100"
+      }`}
+    >
+      {state === "creating"
+        ? "Sending…"
+        : state === "error"
+          ? "Retry"
+          : "+ Asana"}
+    </button>
   );
 }
 

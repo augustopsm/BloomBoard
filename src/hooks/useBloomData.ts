@@ -24,5 +24,6 @@ export function useBoard() {
     milestones: Milestone[];
     todos: Todo[];
     issues: Issue[];
+    asanaEnabled: boolean;
   }>("/api/board", fetcher);
 }

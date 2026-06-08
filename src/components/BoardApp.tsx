@@ -169,6 +169,7 @@ export default function BoardApp({ userName }: { userName: string }) {
               onOpenCard={(card, groupName) =>
                 setDetail({ item: detailFromCard(card, groupName) })
               }
+              asanaEnabled={data?.asanaEnabled ?? false}
             />
           )}
         </main>

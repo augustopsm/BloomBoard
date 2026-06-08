@@ -26,12 +26,14 @@ export default function Board({
   overlay,
   onMove,
   onOpenCard,
+  asanaEnabled,
 }: {
   cards: BoardCard[];
   groups: Rock[];
   overlay: Record<string, ColumnId>;
   onMove: (card: BoardCard, target: ColumnId) => void;
   onOpenCard: (card: BoardCard, groupName: string) => void;
+  asanaEnabled: boolean;
 }) {
   const [activeUid, setActiveUid] = useState<string | null>(null);
 
@@ -91,6 +93,7 @@ export default function Board({
             cards={byColumn[col.id]}
             groupName={groupName}
             onOpenCard={onOpenCard}
+            asanaEnabled={asanaEnabled}
           />
         ))}
       </div>

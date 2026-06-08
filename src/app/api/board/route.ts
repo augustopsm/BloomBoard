@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { errorResponse, requireSession } from "@/lib/api-helpers";
 import { getIssues, getTodos, loadRocksAndMilestones } from "@/lib/bloom/service";
+import { asanaConfigured } from "@/lib/asana";
 import type { Issue, Todo } from "@/lib/bloom/types";
 
 // The board's single data source: rocks + milestones + to-dos + issues.
@@ -34,7 +35,13 @@ export async function GET() {
       console.error("[board] issues fetch failed:", is.reason);
     }
 
-    return NextResponse.json({ rocks, milestones, todos, issues });
+    return NextResponse.json({
+      rocks,
+      milestones,
+      todos,
+      issues,
+      asanaEnabled: asanaConfigured(),
+    });
   } catch (err) {
     return errorResponse(err);
   }

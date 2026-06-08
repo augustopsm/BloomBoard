@@ -9,11 +9,13 @@ export default function Column({
   cards,
   groupName,
   onOpenCard,
+  asanaEnabled,
 }: {
   column: ColumnDef;
   cards: BoardCard[];
   groupName: (rockId: string | null) => string;
   onOpenCard: (card: BoardCard, groupName: string) => void;
+  asanaEnabled: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
 
@@ -45,6 +47,7 @@ export default function Column({
             card={c}
             groupName={groupName(c.rockId)}
             onOpen={() => onOpenCard(c, groupName(c.rockId))}
+            asanaEnabled={asanaEnabled}
           />
         ))}
       </div>

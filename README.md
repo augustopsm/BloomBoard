@@ -64,6 +64,14 @@ client-side JavaScript.
 | --- | --- |
 | `BLOOM_API_BASE_URL` | Bloom API host. Defaults to `https://app.bloomgrowth.com`. |
 | `SESSION_SECRET` | Secret signing the session cookie. `openssl rand -base64 32`. |
+| `ASANA_ACCESS_TOKEN` | _(optional)_ Asana Personal Access Token. Enables the "+ Asana" button that turns a card into an Asana task. |
+| `ASANA_PROJECT_ID` | _(optional)_ Project gid new Asana tasks are added to (from the project URL). |
+| `ASANA_WORKSPACE_ID` | _(optional)_ Fallback workspace gid if no project is set. |
+
+When the Asana variables are set, every card shows a **+ Asana** button that
+creates a task named after the card. The task description records its type
+(Milestone / To-Do / IDS Issue), the parent Rock (for milestones), the owner,
+and a link back to Bloom. Without the variables the button is hidden.
 
 ---
 
