@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -8,6 +8,7 @@ import {
   formatDueDate,
   isOverdue,
   loadAsanaTasks,
+  removeAsanaTask,
   saveAsanaTask,
   type BoardCard,
 } from "@/lib/board";
@@ -33,6 +34,26 @@ export default function Card({
   const stored = loadAsanaTasks()[card.uid] ?? null;
   const [asana, setAsana] = useState<AsanaState>(stored ? "done" : "idle");
   const [asanaUrl, setAsanaUrl] = useState<string | null>(stored?.url ?? null);
+
+  // If a linked Asana task was deleted in Asana, reset so it can be recreated.
+  useEffect(() => {
+    const gid = stored?.gid;
+    if (!gid) return;
+    let cancelled = false;
+    fetch(`/api/asana/task/${gid}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (cancelled || !d || d.exists !== false) return;
+        removeAsanaTask(card.uid);
+        setAsana("idle");
+        setAsanaUrl(null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stored?.gid, card.uid]);
 
   const due = formatDueDate(card.dueDate);
   const overdue = isOverdue(card);

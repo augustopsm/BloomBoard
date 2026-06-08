@@ -86,6 +86,23 @@ export async function moveTaskToSection(taskGid: string, sectionGid: string): Pr
   }
 }
 
+/** Check whether a task still exists in Asana. Returns false on 404 (deleted). */
+export async function taskExists(taskGid: string): Promise<boolean> {
+  const token = process.env.ASANA_ACCESS_TOKEN;
+  if (!token) throw new AsanaError("Asana is not configured on the server.", 503);
+
+  const res = await fetch(`${ASANA_BASE}/tasks/${taskGid}?opt_fields=gid`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (res.status === 404) return false;
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new AsanaError(`Could not check Asana task (${res.status}). ${body.slice(0, 200)}`, res.status);
+  }
+  return true;
+}
+
 /** Create a task in the configured Asana project/workspace. */
 export async function createAsanaTask(
   input: CreateTaskInput,

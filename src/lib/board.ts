@@ -214,6 +214,14 @@ export function saveAsanaTask(cardUid: string, record: AsanaTaskRecord): void {
   localStorage.setItem(ASANA_TASKS_KEY, JSON.stringify(store));
 }
 
+export function removeAsanaTask(cardUid: string): void {
+  if (typeof window === "undefined") return;
+  const store = loadAsanaTasks();
+  if (!(cardUid in store)) return;
+  delete store[cardUid];
+  localStorage.setItem(ASANA_TASKS_KEY, JSON.stringify(store));
+}
+
 export function isOverdue(card: BoardCard): boolean {
   if (card.complete || !card.dueDate) return false;
   return new Date(card.dueDate).getTime() < Date.now();
