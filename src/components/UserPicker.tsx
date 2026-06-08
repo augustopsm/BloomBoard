@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTeam } from "@/hooks/useBloomData";
-import type { TeamMember } from "@/lib/bloom/types";
 
 function initials(name: string): string {
   return name
@@ -13,23 +12,17 @@ function initials(name: string): string {
     .join("");
 }
 
-function Avatar({ name, size = 6 }: { name: string; size?: number }) {
-  return (
-    <span
-      className={`flex h-${size} w-${size} shrink-0 items-center justify-center rounded-full bg-zinc-700 text-[9px] font-semibold text-zinc-300`}
-    >
-      {initials(name)}
-    </span>
-  );
-}
-
 export default function UserPicker({
   currentUserId,
   selectedIds,
   onChange,
 }: {
   currentUserId: string;
-  /** IDs of extra team members whose items are shown alongside yours. */
+  /**
+   * Explicit list of user IDs to show on the board.
+   * Empty = show your own items (default, no picker active).
+   * Non-empty = show ONLY these users' items.
+   */
   selectedIds: string[];
   onChange: (ids: string[]) => void;
 }) {
@@ -54,20 +47,25 @@ export default function UserPicker({
     }
   }
 
-  // Team members excluding the current user (you're always shown)
+  const isFiltering = selectedIds.length > 0;
+
+  // All members including current user — current user shown first
+  const currentUser = members?.find((m) => m.id === currentUserId);
   const teammates = members?.filter((m) => m.id !== currentUserId) ?? [];
-  const selectedMembers = teammates.filter((m) => selectedIds.includes(m.id));
-  const hasExtra = selectedMembers.length > 0;
+  const allMembers = currentUser ? [currentUser, ...teammates] : teammates;
+
+  // Labels for the button
+  const selectedMembers = allMembers.filter((m) => selectedIds.includes(m.id));
 
   return (
     <div ref={ref} className="relative flex items-center gap-1.5">
-      {/* Selected teammate avatars */}
+      {/* Selected member avatar chips */}
       {selectedMembers.length > 0 && (
         <div className="flex items-center -space-x-1.5">
           {selectedMembers.slice(0, 4).map((m) => (
             <span
               key={m.id}
-              title={m.name}
+              title={m.id === currentUserId ? `${m.name} (you)` : m.name}
               className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#111113] bg-zinc-700 text-[9px] font-semibold text-zinc-300"
             >
               {initials(m.name)}
@@ -84,9 +82,9 @@ export default function UserPicker({
       {/* Toggle button */}
       <button
         onClick={() => setOpen((v) => !v)}
-        title={hasExtra ? "Edit team view" : "Add team members"}
+        title={isFiltering ? "Edit team filter" : "Filter by team member"}
         className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm transition ${
-          hasExtra
+          isFiltering
             ? "border-bloom/40 bg-bloom/10 text-bloom hover:bg-bloom/20"
             : "border-white/[0.08] bg-white/[0.04] text-zinc-400 hover:bg-white/[0.08] hover:text-zinc-200"
         }`}
@@ -96,7 +94,11 @@ export default function UserPicker({
           <path d="M1 13c0-2.8 2.2-4 5-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
           <path d="M12 9v4M10 11h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
         </svg>
-        <span>{hasExtra ? `+${selectedMembers.length} teammate${selectedMembers.length > 1 ? "s" : ""}` : "Team"}</span>
+        <span>
+          {isFiltering
+            ? `${selectedMembers.length} member${selectedMembers.length > 1 ? "s" : ""}`
+            : "Team"}
+        </span>
       </button>
 
       {/* Dropdown */}
@@ -104,14 +106,14 @@ export default function UserPicker({
         <div className="absolute right-0 top-full z-50 mt-1.5 w-60 overflow-hidden rounded-lg border border-white/[0.08] bg-[#1a1a1d] shadow-2xl shadow-black/60">
           <div className="flex items-center justify-between border-b border-white/[0.06] px-3 py-2">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600">
-              Add team members
+              Show board for
             </p>
-            {hasExtra && (
+            {isFiltering && (
               <button
                 onClick={() => onChange([])}
                 className="text-[10px] text-zinc-600 transition hover:text-zinc-400"
               >
-                Clear
+                Reset
               </button>
             )}
           </div>
@@ -121,14 +123,16 @@ export default function UserPicker({
               <p className="px-3 py-2 text-xs text-zinc-600">Loading team…</p>
             )}
 
-            {!isLoading && teammates.length === 0 && (
+            {!isLoading && allMembers.length === 0 && (
               <p className="px-3 py-2 text-xs text-zinc-600">
-                No teammates found. Set <code className="text-zinc-500">BLOOM_MEETING_ID</code> to load your team.
+                No team members found. Set{" "}
+                <code className="text-zinc-500">BLOOM_MEETING_ID</code> to load your team.
               </p>
             )}
 
-            {teammates.map((member) => {
+            {allMembers.map((member) => {
               const checked = selectedIds.includes(member.id);
+              const isMe = member.id === currentUserId;
               return (
                 <button
                   key={member.id}
@@ -152,18 +156,21 @@ export default function UserPicker({
                   <span className={`flex-1 truncate ${checked ? "text-zinc-100" : "text-zinc-400"}`}>
                     {member.name}
                   </span>
+                  {isMe && (
+                    <span className="shrink-0 text-[10px] text-zinc-600">you</span>
+                  )}
                 </button>
               );
             })}
           </div>
 
-          {hasExtra && (
-            <div className="border-t border-white/[0.06] px-3 py-2">
-              <p className="text-[10px] text-zinc-600">
-                Showing your items + {selectedMembers.length} teammate{selectedMembers.length > 1 ? "s" : ""}
-              </p>
-            </div>
-          )}
+          <div className="border-t border-white/[0.06] px-3 py-2">
+            <p className="text-[10px] text-zinc-600">
+              {isFiltering
+                ? `Showing ${selectedMembers.length} member${selectedMembers.length > 1 ? "s" : ""}' items only`
+                : "Select members to filter the board"}
+            </p>
+          </div>
         </div>
       )}
     </div>

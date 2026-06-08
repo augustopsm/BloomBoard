@@ -57,24 +57,25 @@ function mergeBoards(boards: BoardData[]): BoardData {
 }
 
 /**
- * Always loads the current user's board. When additionalUserIds is non-empty,
- * loads each user's board in parallel and merges all results together.
+ * Load board data for the given user IDs.
+ * - Empty array → load the current user's own board (default).
+ * - Non-empty array → load ONLY those users' boards and merge them.
+ *   The current user is not auto-included; add their ID to the list to
+ *   include their items.
  */
-export function useBoard(additionalUserIds: string[] = []) {
-  const sortedExtra = [...additionalUserIds].sort();
-  const key = ["/api/board", ...sortedExtra];
+export function useBoard(selectedUserIds: string[] = []) {
+  const sorted = [...selectedUserIds].sort();
+  // Use a stable SWR key: ["mine"] or ["users", id1, id2, ...]
+  const key = sorted.length === 0 ? ["mine"] : ["users", ...sorted];
 
-  const result = useSWR<BoardData>(key, async () => {
-    const urls = [
-      "/api/board",
-      ...sortedExtra.map((id) => `/api/board?userId=${encodeURIComponent(id)}`),
-    ];
+  return useSWR<BoardData>(key, async () => {
+    const urls =
+      sorted.length === 0
+        ? ["/api/board"]
+        : sorted.map((id) => `/api/board?userId=${encodeURIComponent(id)}`);
     const boards = await Promise.all(urls.map(fetchBoard));
     return mergeBoards(boards);
   });
-
-  // Expose a mutate that works for the composite SWR key.
-  return result;
 }
 
 export function useTeam() {
