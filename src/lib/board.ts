@@ -39,6 +39,9 @@ export interface BoardCard {
   // Issue-specific detail fields.
   priority?: number | null;
   fromWhere?: string | null;
+  /** The Bloom meeting this item belongs to (todo context / issue origin /
+   *  milestone's parent rock meetings). */
+  meeting?: string | null;
 }
 
 /** Synthetic "rock" that gathers rock-less to-dos. */
@@ -76,6 +79,7 @@ export function todoToCard(t: Todo): BoardCard {
     context: t.context,
     createdAt: t.createdAt,
     detailsUrl: t.detailsUrl,
+    meeting: t.context ?? null,
   };
 }
 
@@ -93,6 +97,7 @@ export function issueToCard(i: Issue): BoardCard {
     detailsUrl: i.detailsUrl,
     priority: i.priority,
     fromWhere: i.fromWhere,
+    meeting: i.fromWhere ?? null,
   };
 }
 

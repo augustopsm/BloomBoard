@@ -43,11 +43,13 @@ export default function Card({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          id: card.id,
           kind: card.kind,
           name: card.name,
           // Rock name is only meaningful for milestones (todos/issues use a
           // synthetic group name we don't want to send as a rock).
           rockName: card.kind === "milestone" ? groupName : null,
+          meeting: card.meeting ?? null,
           ownerName: card.owner?.name ?? null,
           dueDate: card.dueDate,
           bloomUrl: card.detailsUrl ?? null,

@@ -42,7 +42,16 @@ export default function BoardApp({ userName }: { userName: string }) {
 
   // Board cards: milestones + to-dos + issues, unified.
   const cards: BoardCard[] = useMemo(() => {
-    const ms = (data?.milestones ?? []).map(milestoneToCard);
+    // Map a rock id to its meeting names, so milestones can inherit the
+    // meeting of their parent rock.
+    const rockMeetings = new Map(
+      (data?.rocks ?? []).map((r) => [r.id, (r.meetings ?? []).join(", ")]),
+    );
+    const ms = (data?.milestones ?? []).map((m) => {
+      const card = milestoneToCard(m);
+      const meeting = card.rockId ? rockMeetings.get(card.rockId) : null;
+      return { ...card, meeting: meeting || null };
+    });
     const td = (data?.todos ?? []).map(todoToCard);
     const is = (data?.issues ?? []).map(issueToCard);
     return [...ms, ...td, ...is];
