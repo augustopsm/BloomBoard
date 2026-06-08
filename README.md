@@ -73,6 +73,25 @@ creates a task named after the card. The task description records its type
 (Milestone / To-Do / IDS Issue), the parent Rock (for milestones), the owner,
 and a link back to Bloom. Without the variables the button is hidden.
 
+### Deploy to Vercel
+
+This is a standard Next.js app — Vercel auto-detects it.
+
+1. **vercel.com → Add New → Project → Import** the `augustopsm/bloomboard`
+   repository. The only branch is the production branch, so it deploys as-is.
+2. Framework preset is detected as **Next.js** (build `next build`, no extra
+   config needed).
+3. Add **Environment Variables** (Production scope):
+   - `SESSION_SECRET` — generate with `openssl rand -base64 32` (required;
+     without it the cookie signature falls back to an insecure default).
+   - `ASANA_ACCESS_TOKEN`, `ASANA_PROJECT_ID` — for the Asana button.
+   - `BLOOM_API_BASE_URL` — optional; defaults to `https://app.bloomgrowth.com`.
+4. **Deploy**, then open the URL and sign in with your Bloom credentials.
+
+Env vars are read at runtime, so changing them only requires a redeploy — not
+a rebuild. `.env.local` is gitignored and never reaches Vercel; the dashboard
+values are the source of truth in production.
+
 ---
 
 ## Architecture
