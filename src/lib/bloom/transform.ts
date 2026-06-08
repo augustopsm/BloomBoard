@@ -147,7 +147,7 @@ export function toTodo(raw: Raw): Todo {
     complete: asBool(pick(raw, "Complete", "complete", "Completed")),
     dueDate: asIsoDate(pick(raw, "DueDate", "dueDate", "Date")),
     owner: toOwner(pick(raw, "Owner", "owner", "User", "user")),
-    context: asString(pick(raw, "ContextTitle", "contextTitle", "Context")) ?? null,
+    context: asString(pick(raw, "Origin", "origin", "ContextTitle", "contextTitle", "Context")) ?? null,
     createdAt: asIsoDate(pick(raw, "CreateTime", "createTime", "CreatedAt")),
     detailsUrl: toDetailsUrl(pick(raw, "DetailsUrl", "detailsUrl")),
   };

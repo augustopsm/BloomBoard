@@ -13,9 +13,11 @@ export async function GET() {
   const token = (session as { token: string }).token;
   const rawTodos = toArray(await bloomFetch(token, endpoints.myTodos));
   const rawIssues = toArray(await bloomFetch(token, endpoints.myIssues));
+  const rawScorecard = await bloomFetch(token, endpoints.myScorecard).catch(() => null);
 
   return NextResponse.json({
     todo: rawTodos[0] ?? null,
     issue: rawIssues[0] ?? null,
+    scorecard: rawScorecard,
   });
 }
