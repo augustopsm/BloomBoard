@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { errorResponse, requireSession } from "@/lib/api-helpers";
-import { getItemDetails, type DetailKind } from "@/lib/bloom/service";
+import { getItemNotesUrl, type DetailKind } from "@/lib/bloom/service";
 
 const VALID: DetailKind[] = ["todo", "issue", "rock", "milestone"];
 
@@ -16,12 +16,12 @@ export async function GET(
   }
 
   try {
-    const details = await getItemDetails(
+    const url = await getItemNotesUrl(
       session.token,
       params.kind as DetailKind,
       params.id,
     );
-    return NextResponse.json({ details });
+    return NextResponse.json({ url });
   } catch (err) {
     return errorResponse(err);
   }

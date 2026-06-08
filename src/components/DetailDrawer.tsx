@@ -129,8 +129,8 @@ export default function DetailDrawer({
   kindLabelOverride?: string;
   onClose: () => void;
 }) {
-  const [details, setDetails] = useState<string | null>(null);
-  const [detailsState, setDetailsState] = useState<"idle" | "loading" | "done">(
+  const [notesUrl, setNotesUrl] = useState<string | null>(null);
+  const [notesState, setNotesState] = useState<"idle" | "loading" | "done">(
     "idle",
   );
 
@@ -142,26 +142,26 @@ export default function DetailDrawer({
     return () => window.removeEventListener("keydown", onKey);
   }, [item, onClose]);
 
-  // Lazy-load notes/details whenever a new item opens.
+  // Lazy-resolve the notespad URL whenever a new item opens.
   useEffect(() => {
     if (!item || item.detailKind === "milestone") {
-      setDetails(null);
-      setDetailsState("done");
+      setNotesUrl(null);
+      setNotesState("done");
       return;
     }
     let cancelled = false;
-    setDetails(null);
-    setDetailsState("loading");
+    setNotesUrl(null);
+    setNotesState("loading");
     fetch(`/api/details/${item.detailKind}/${item.id}`)
-      .then((r) => (r.ok ? r.json() : { details: null }))
+      .then((r) => (r.ok ? r.json() : { url: null }))
       .then((d) => {
         if (cancelled) return;
-        setDetails(typeof d.details === "string" ? d.details : null);
-        setDetailsState("done");
+        setNotesUrl(typeof d.url === "string" ? d.url : null);
+        setNotesState("done");
       })
       .catch(() => {
         if (cancelled) return;
-        setDetailsState("done");
+        setNotesState("done");
       });
     return () => {
       cancelled = true;
@@ -240,12 +240,14 @@ export default function DetailDrawer({
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-600">
                 Details
               </p>
-              {detailsState === "loading" ? (
+              {notesState === "loading" ? (
                 <p className="text-[13px] text-zinc-600">Loading notes…</p>
-              ) : details ? (
-                <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-zinc-300">
-                  {details}
-                </p>
+              ) : notesUrl ? (
+                <iframe
+                  src={notesUrl}
+                  title="Notes"
+                  className="h-80 w-full rounded-lg border border-white/[0.08] bg-white"
+                />
               ) : (
                 <p className="text-[13px] text-zinc-600">
                   No notes for this item.
