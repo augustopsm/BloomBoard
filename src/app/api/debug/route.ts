@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/api-helpers";
 import { bloomFetch } from "@/lib/bloom/client";
-import { endpoints } from "@/lib/bloom/endpoints";
 import { toArray } from "@/lib/bloom/transform";
 
 export async function GET() {
@@ -20,37 +19,25 @@ export async function GET() {
     }
   }
 
-  const userId = 1059200;
+  // Known meeting id from the todo's OriginId field
+  const meetingId = 215896;
 
-  // 1. Try singular "user" path for todos (vs "users" which returned SPA)
-  // 2. Try L10 meetings (likely where org users are discoverable)
-  // 3. Try org/team user listing variants
   const results = {
-    "todo/user/{id} (singular)": await probe(`/api/v1/todo/user/${userId}`),
-    "L10/user/mine": await probe("/api/v1/L10/user/mine"),
-    "meeting/user/mine": await probe("/api/v1/meeting/user/mine"),
-    "users/mine": await probe("/api/v1/users/mine"),
-    "organization/users": await probe("/api/v1/organization/users"),
-    "orgusers": await probe("/api/v1/orgusers"),
-    "teams": await probe("/api/v1/teams"),
-    "company/users": await probe("/api/v1/company/users"),
+    // Try fetching all org rocks (no user scoping)
+    "rocks (all)": await probe("/api/v1/rocks"),
+    "rocks/all": await probe("/api/v1/rocks/all"),
+
+    // Meeting-based user discovery using the known OriginId
+    [`L10/${meetingId}`]: await probe(`/api/v1/L10/${meetingId}`),
+    [`L10/${meetingId}/attendees`]: await probe(`/api/v1/L10/${meetingId}/attendees`),
+    [`L10/${meetingId}/users`]: await probe(`/api/v1/L10/${meetingId}/users`),
+    [`L10/${meetingId}/rocks`]: await probe(`/api/v1/L10/${meetingId}/rocks`),
+    [`L10/${meetingId}/todos`]: await probe(`/api/v1/L10/${meetingId}/todos`),
+
+    // Alternate meeting path patterns
+    [`meeting/${meetingId}/attendees`]: await probe(`/api/v1/meeting/${meetingId}/attendees`),
+    [`meetings/${meetingId}/attendees`]: await probe(`/api/v1/meetings/${meetingId}/attendees`),
   };
 
-  // If L10 meetings work, probe the first meeting for attendees
-  const l10 = results["L10/user/mine"];
-  let meetingAttendees = null;
-  if (l10.ok && l10.sample) {
-    const meetingId = (l10.sample as Record<string, unknown>)?.Id;
-    if (meetingId) {
-      meetingAttendees = {
-        meetingId,
-        attendees: await probe(`/api/v1/L10/${meetingId}/attendees`),
-        users: await probe(`/api/v1/L10/${meetingId}/users`),
-        members: await probe(`/api/v1/L10/${meetingId}/members`),
-        rocks: await probe(`/api/v1/L10/${meetingId}/rocks`),
-      };
-    }
-  }
-
-  return NextResponse.json({ results, meetingAttendees });
+  return NextResponse.json(results);
 }
