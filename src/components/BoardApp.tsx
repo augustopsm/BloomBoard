@@ -47,10 +47,14 @@ export default function BoardApp({ userName }: { userName: string }) {
     const rockMeetings = new Map(
       (data?.rocks ?? []).map((r) => [r.id, (r.meetings ?? []).join(", ")]),
     );
+    const rockOwners = new Map(
+      (data?.rocks ?? []).filter((r) => r.owner).map((r) => [r.id, r.owner!]),
+    );
     const ms = (data?.milestones ?? []).map((m) => {
       const card = milestoneToCard(m);
       const meeting = card.rockId ? rockMeetings.get(card.rockId) : null;
-      return { ...card, meeting: meeting || null };
+      const owner = card.owner ?? (card.rockId ? (rockOwners.get(card.rockId) ?? null) : null);
+      return { ...card, meeting: meeting || null, owner };
     });
     const td = (data?.todos ?? []).map(todoToCard);
     const is = (data?.issues ?? []).map(issueToCard);
