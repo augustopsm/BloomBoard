@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { columnFor, isOverdue, type BoardCard, type ColumnId } from "@/lib/board";
+import { columnFor, colorForRock, isOverdue, TODO_GROUP_ID, ISSUE_GROUP_ID, type BoardCard, type ColumnId } from "@/lib/board";
+import type { Rock } from "@/lib/bloom/types";
 
 const COLUMNS: { id: ColumnId; label: string; color: string }[] = [
   { id: "todo",        label: "To Do",       color: "bg-zinc-500" },
@@ -19,9 +20,11 @@ const KINDS: { id: BoardCard["kind"]; label: string; color: string }[] = [
 export default function KPIDrawer({
   cards,
   overlay,
+  groups,
 }: {
   cards: BoardCard[];
   overlay: Record<string, ColumnId>;
+  groups: Rock[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -36,8 +39,28 @@ export default function KPIDrawer({
     const overdue = cards.filter((c) => isOverdue(c)).length;
     const completionPct = total > 0 ? Math.round((byColumn.complete / total) * 100) : 0;
 
-    return { total, byColumn, byKind, overdue, completionPct };
-  }, [cards, overlay]);
+    // By rock — only real rocks (skip synthetic groups)
+    const realRocks = groups.filter((g) => g.id !== TODO_GROUP_ID && g.id !== ISSUE_GROUP_ID);
+    const byRock = realRocks.map((rock) => {
+      const rockCards = cards.filter((c) => c.rockId === rock.id);
+      const done = rockCards.filter((c) => columnFor(c, overlay) === "complete").length;
+      const pct = rockCards.length > 0 ? Math.round((done / rockCards.length) * 100) : 0;
+      return { id: rock.id, name: rock.name, total: rockCards.length, done, pct };
+    }).filter((r) => r.total > 0);
+
+    // By meeting
+    const meetingMap = new Map<string, number>();
+    for (const card of cards) {
+      if (card.meeting) {
+        meetingMap.set(card.meeting, (meetingMap.get(card.meeting) ?? 0) + 1);
+      }
+    }
+    const byMeeting = Array.from(meetingMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    return { total, byColumn, byKind, overdue, completionPct, byRock, byMeeting };
+  }, [cards, overlay, groups]);
 
   return (
     <div className="relative flex h-full shrink-0">
@@ -100,6 +123,30 @@ export default function KPIDrawer({
                   />
                 ))}
               </Section>
+
+              {/* By rock */}
+              {stats.byRock.length > 0 && (
+                <Section title="By Rock">
+                  {stats.byRock.map((rock) => (
+                    <RockRow key={rock.id} rock={rock} />
+                  ))}
+                </Section>
+              )}
+
+              {/* By meeting */}
+              {stats.byMeeting.length > 0 && (
+                <Section title="By Meeting">
+                  {stats.byMeeting.map((m) => (
+                    <BarRow
+                      key={m.name}
+                      label={m.name}
+                      value={m.count}
+                      total={stats.total}
+                      color="bg-zinc-400"
+                    />
+                  ))}
+                </Section>
+              )}
 
             </div>
           </>
@@ -167,13 +214,36 @@ function BarRow({ label, value, total, color }: {
   return (
     <div>
       <div className="mb-1 flex items-center justify-between text-[11px]">
-        <span className="text-zinc-400">{label}</span>
-        <span className="text-zinc-500">{value} <span className="text-zinc-700">· {pct}%</span></span>
+        <span className="truncate max-w-[140px] text-zinc-400" title={label}>{label}</span>
+        <span className="shrink-0 text-zinc-500">{value} <span className="text-zinc-700">· {pct}%</span></span>
       </div>
       <div className="h-1 w-full overflow-hidden rounded-full bg-white/[0.06]">
         <div
           className={`h-full rounded-full ${color} opacity-70 transition-all duration-500`}
           style={{ width: `${pct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function RockRow({ rock }: {
+  rock: { id: string; name: string; total: number; done: number; pct: number };
+}) {
+  const accent = colorForRock(rock.id);
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-[11px]">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: accent }} />
+          <span className="truncate max-w-[128px] text-zinc-400" title={rock.name}>{rock.name}</span>
+        </div>
+        <span className="shrink-0 text-zinc-500">{rock.done}/{rock.total} <span className="text-zinc-700">· {rock.pct}%</span></span>
+      </div>
+      <div className="h-1 w-full overflow-hidden rounded-full bg-white/[0.06]">
+        <div
+          className="h-full rounded-full opacity-70 transition-all duration-500"
+          style={{ width: `${rock.pct}%`, backgroundColor: accent }}
         />
       </div>
     </div>
