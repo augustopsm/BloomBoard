@@ -11,15 +11,45 @@ export async function GET() {
   if (session instanceof NextResponse) return session;
 
   const token = (session as { token: string }).token;
-  const rawTodos = toArray(await bloomFetch(token, endpoints.myTodos));
-  const rawIssues = toArray(await bloomFetch(token, endpoints.myIssues));
-  const rawRocks = toArray(await bloomFetch(token, endpoints.myRocks));
-  const rawScorecard = await bloomFetch(token, endpoints.myScorecard).catch(() => null);
 
-  return NextResponse.json({
-    todo: rawTodos[0] ?? null,
-    issue: rawIssues[0] ?? null,
-    rock: rawRocks[0] ?? null,
-    scorecard: rawScorecard,
-  });
+  // Probe a candidate endpoint: report status + a tiny snippet (no full dumps).
+  async function probe(path: string) {
+    try {
+      const data = await bloomFetch(token, path);
+      const arr = toArray(data);
+      return {
+        ok: true,
+        count: Array.isArray(data) || arr.length ? arr.length : undefined,
+        sample: arr[0] ?? data ?? null,
+      };
+    } catch (err) {
+      const e = err as { status?: number; message?: string };
+      return { ok: false, status: e.status ?? null, message: e.message ?? String(err) };
+    }
+  }
+
+  const rawTodos = toArray(await bloomFetch(token, endpoints.myTodos));
+  const ownerId =
+    (rawTodos[0]?.Owner as Record<string, unknown> | undefined)?.Id ?? null;
+
+  // Candidate endpoints for listing org users and fetching another user's items.
+  const userProbes: Record<string, unknown> = {
+    "users (list)": await probe("/api/v1/users"),
+    "users/all": await probe("/api/v1/users/all"),
+    "users/search": await probe("/api/v1/users/search"),
+    "members": await probe("/api/v1/members"),
+    "seats": await probe("/api/v1/seats"),
+  };
+
+  // If we know a user id, try per-user item endpoints.
+  let perUser: Record<string, unknown> = {};
+  if (ownerId) {
+    perUser = {
+      [`rocks/user/${ownerId}`]: await probe(`/api/v1/rocks/user/${ownerId}`),
+      [`todo/users/${ownerId}`]: await probe(`/api/v1/todo/users/${ownerId}`),
+      [`issues/users/${ownerId}`]: await probe(`/api/v1/issues/users/${ownerId}`),
+    };
+  }
+
+  return NextResponse.json({ ownerId, userProbes, perUser });
 }
