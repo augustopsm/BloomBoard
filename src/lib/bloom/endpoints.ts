@@ -48,4 +48,11 @@ export const endpoints = {
   myIssues: "/api/v1/issues/users/mine",
   issue: (id: string) => `/api/v1/issues/${id}`,
   issueComplete: (id: string) => `/api/v1/issues/${id}/complete`,
+
+  // Notes / details pads. Each returns a { URL } pointing at the note's
+  // HTML content (no plain-text field exists on the entities themselves).
+  notesForTodo: (id: string) => `/api/v1/todo/notes/${id}`,
+  notesForIssue: (id: string) => `/api/v1/issues/notes/${id}`,
+  notesForRock: (id: string) =>
+    `/api/v1/rocks/notes/${id}?showControls=false&readOnly=true`,
 } as const;

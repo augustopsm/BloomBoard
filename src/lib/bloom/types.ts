@@ -58,7 +58,6 @@ export interface Todo {
 export interface Issue {
   id: string;
   name: string;
-  description: string | null;
   complete: boolean;
   owner: Owner | null;
   /** Lower number = higher priority in Bloom. */

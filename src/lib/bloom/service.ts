@@ -2,9 +2,11 @@
 // domain objects so route handlers stay thin.
 
 import { bloomFetch } from "./client";
-import { endpoints } from "./endpoints";
+import { BLOOM_BASE_URL, endpoints } from "./endpoints";
 import { toArray, toIssue, toMilestone, toRock, toTodo } from "./transform";
 import type { Issue, Milestone, Rock, Todo } from "./types";
+
+export type DetailKind = "todo" | "issue" | "rock" | "milestone";
 
 
 /**
@@ -116,4 +118,74 @@ export async function setIssueComplete(
     method: "POST",
     body: JSON.stringify({ complete }),
   });
+}
+
+/**
+ * Fetch an item's notes/details as plain text. Bloom stores these in a
+ * "notespad" reached via a two-step hop: the notes endpoint returns a
+ * { URL }, and that URL serves the note's HTML. We fetch it server-side with
+ * the bearer token and strip the markup. Best-effort: returns null on any
+ * failure (milestones have no notes endpoint at all).
+ */
+export async function getItemDetails(
+  token: string,
+  kind: DetailKind,
+  id: string,
+): Promise<string | null> {
+  const path =
+    kind === "todo"
+      ? endpoints.notesForTodo(id)
+      : kind === "issue"
+        ? endpoints.notesForIssue(id)
+        : kind === "rock"
+          ? endpoints.notesForRock(id)
+          : null;
+  if (!path) return null; // milestones have no notes
+
+  let url: string | null = null;
+  try {
+    const res = await bloomFetch<{ URL?: string; url?: string }>(token, path);
+    url = res?.URL ?? res?.url ?? null;
+  } catch {
+    return null;
+  }
+  if (!url) return null;
+
+  const abs = /^https?:\/\//i.test(url)
+    ? url
+    : `${BLOOM_BASE_URL}/${url.replace(/^\//, "")}`;
+
+  try {
+    const r = await fetch(abs, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!r.ok) return null;
+    const text = htmlToText(await r.text());
+    return text || null;
+  } catch {
+    return null;
+  }
+}
+
+/** Strip HTML to readable plain text, preserving line breaks between blocks. */
+function htmlToText(html: string): string {
+  return html
+    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|h[1-6]|tr)>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&quot;/gi, '"')
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .split("\n")
+    .map((l) => l.trim())
+    .join("\n")
+    .trim();
 }

@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { BoardCard, CardKind } from "@/lib/board";
 import type { Issue, Owner, Rock } from "@/lib/bloom/types";
 
+type DetailKind = "todo" | "issue" | "rock" | "milestone";
+
 /** Normalized shape the drawer renders, regardless of source entity. */
 export interface DetailItem {
+  /** Underlying Bloom id, used to lazy-load notes/details. */
+  id: string;
+  /** Real entity kind for the details fetch (rocks aren't a CardKind). */
+  detailKind: DetailKind;
   title: string;
   kind: CardKind;
   complete: boolean;
@@ -44,6 +50,8 @@ export function detailFromCard(card: BoardCard, groupName: string): DetailItem {
   if (created) rows.push({ label: "Created", value: created });
   rows.push({ label: "Status", value: card.complete ? "Complete" : "Open" });
   return {
+    id: card.id,
+    detailKind: card.kind,
     title: card.name,
     kind: card.kind,
     complete: card.complete,
@@ -62,8 +70,9 @@ export function detailFromIssue(issue: Issue): DetailItem {
   const created = fmtDate(issue.createdAt);
   if (created) rows.push({ label: "Created", value: created });
   rows.push({ label: "Status", value: issue.complete ? "Solved" : "Open" });
-  if (issue.description) rows.push({ label: "Details", value: issue.description });
   return {
+    id: issue.id,
+    detailKind: "issue",
     title: issue.name,
     kind: "issue",
     complete: issue.complete,
@@ -85,6 +94,8 @@ export function detailFromRock(rock: Rock): DetailItem {
     rows.push({ label: "Meetings", value: rock.meetings.join(", ") });
   }
   return {
+    id: rock.id,
+    detailKind: "rock",
     // Rocks aren't a card kind; reuse milestone styling for the neutral chip.
     title: rock.name,
     kind: "milestone",
@@ -118,6 +129,11 @@ export default function DetailDrawer({
   kindLabelOverride?: string;
   onClose: () => void;
 }) {
+  const [details, setDetails] = useState<string | null>(null);
+  const [detailsState, setDetailsState] = useState<"idle" | "loading" | "done">(
+    "idle",
+  );
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -125,6 +141,32 @@ export default function DetailDrawer({
     if (item) window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [item, onClose]);
+
+  // Lazy-load notes/details whenever a new item opens.
+  useEffect(() => {
+    if (!item || item.detailKind === "milestone") {
+      setDetails(null);
+      setDetailsState("done");
+      return;
+    }
+    let cancelled = false;
+    setDetails(null);
+    setDetailsState("loading");
+    fetch(`/api/details/${item.detailKind}/${item.id}`)
+      .then((r) => (r.ok ? r.json() : { details: null }))
+      .then((d) => {
+        if (cancelled) return;
+        setDetails(typeof d.details === "string" ? d.details : null);
+        setDetailsState("done");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setDetailsState("done");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [item]);
 
   if (!item) return null;
   const meta = KIND_META[item.kind];
@@ -192,6 +234,25 @@ export default function DetailDrawer({
               </div>
             ))}
           </dl>
+
+          {item.detailKind !== "milestone" && (
+            <div className="mt-6 border-t border-white/[0.06] pt-5">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-zinc-600">
+                Details
+              </p>
+              {detailsState === "loading" ? (
+                <p className="text-[13px] text-zinc-600">Loading notes…</p>
+              ) : details ? (
+                <p className="whitespace-pre-wrap text-[13px] leading-relaxed text-zinc-300">
+                  {details}
+                </p>
+              ) : (
+                <p className="text-[13px] text-zinc-600">
+                  No notes for this item.
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {item.detailsUrl && (

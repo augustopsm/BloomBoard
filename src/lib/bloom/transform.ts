@@ -158,7 +158,6 @@ export function toIssue(raw: Raw): Issue {
   return {
     id: asString(pick(raw, "Id", "id"))!,
     name: asString(pick(raw, "Name", "name", "Title", "title")) ?? "Untitled",
-    description: asString(pick(raw, "Details", "details", "Description", "description")) ?? null,
     complete: asBool(pick(raw, "Complete", "complete", "Completed")),
     owner: toOwner(pick(raw, "Owner", "owner", "User", "user")),
     priority: priority === undefined || priority === null ? null : Number(priority),
