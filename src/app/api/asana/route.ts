@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireSession } from "@/lib/api-helpers";
 import { AsanaError, createAsanaTask } from "@/lib/asana";
-import { getItemNotesUrl, type DetailKind } from "@/lib/bloom/service";
 
 type CardKind = "milestone" | "todo" | "issue";
 
@@ -62,22 +61,6 @@ export async function POST(req: Request) {
   if (body.ownerName) lines.push(`Owner: ${body.ownerName}`);
   lines.push("Source: Bloom Growth");
   if (body.bloomUrl) lines.push(`Bloom: ${body.bloomUrl}`);
-
-  // Try to include the item's notes. Bloom's notespad is a client-rendered
-  // editor we can't scrape to text server-side, but we can link to it so the
-  // full details are one click away from the ticket.
-  if (body.id) {
-    try {
-      const notesUrl = await getItemNotesUrl(
-        session.token,
-        body.kind as DetailKind,
-        body.id,
-      );
-      if (notesUrl) lines.push(`Details (notes): ${notesUrl}`);
-    } catch {
-      // Notes are best-effort; never block task creation on them.
-    }
-  }
 
   try {
     const task = await createAsanaTask({
