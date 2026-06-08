@@ -214,11 +214,20 @@ function AsanaConfirmModal({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const [project, setProject] = useState<{ name: string; url: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/asana/project")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.name) setProject({ name: d.name, url: d.url ?? "" }); })
+      .catch(() => {});
+  }, []);
+
   const titleTag = TITLE_TAG[card.kind];
   const taskTitle = `[${titleTag}] ${card.name}`;
   const due = formatDueDate(card.dueDate);
 
-  const rows: { label: string; value: string }[] = [
+  const rows: { label: string; value: string; url?: string }[] = [
     {
       label: "Type",
       value:
@@ -233,8 +242,9 @@ function AsanaConfirmModal({
   if (card.meeting) rows.push({ label: "Meeting", value: card.meeting });
   if (card.owner) rows.push({ label: "Owner", value: card.owner.name });
   if (due) rows.push({ label: "Due", value: due });
-  rows.push({ label: "Source", value: "Bloom Growth" });
+  rows.push({ label: "Board", value: project?.name ?? "Loading…", url: project?.url });
   rows.push({ label: "Landing in", value: "Backlog" });
+  rows.push({ label: "Source", value: "Bloom Growth" });
 
   return (
     <div
@@ -262,9 +272,18 @@ function AsanaConfirmModal({
           {rows.map((r) => (
             <div key={r.label} className="flex items-start gap-3 text-[12px]">
               <span className="w-20 shrink-0 text-zinc-500">{r.label}</span>
-              <span className={`text-zinc-300 ${r.label === "Landing in" ? "text-zinc-400" : ""}`}>
-                {r.value}
-              </span>
+              {r.url ? (
+                <a
+                  href={r.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate text-zinc-300 underline decoration-zinc-600 underline-offset-2 hover:text-zinc-100"
+                >
+                  {r.value}
+                </a>
+              ) : (
+                <span className="text-zinc-300">{r.value}</span>
+              )}
             </div>
           ))}
         </div>

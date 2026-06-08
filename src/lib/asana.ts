@@ -86,6 +86,37 @@ export async function moveTaskToSection(taskGid: string, sectionGid: string): Pr
   }
 }
 
+export interface AsanaProject {
+  gid: string;
+  name: string;
+  url: string;
+}
+
+/** Fetch the configured project's name and permalink. */
+export async function getProjectInfo(): Promise<AsanaProject> {
+  const token = process.env.ASANA_ACCESS_TOKEN;
+  const projectId = process.env.ASANA_PROJECT_ID;
+  if (!token || !projectId) throw new AsanaError("Asana is not configured on the server.", 503);
+
+  const res = await fetch(
+    `${ASANA_BASE}/projects/${projectId}?opt_fields=gid,name,permalink_url`,
+    {
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      cache: "no-store",
+    },
+  );
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new AsanaError(`Could not fetch Asana project (${res.status}). ${body.slice(0, 200)}`, res.status);
+  }
+  const json = (await res.json()) as { data?: { gid: string; name: string; permalink_url: string } };
+  return {
+    gid: json.data?.gid ?? projectId,
+    name: json.data?.name ?? "Asana Project",
+    url: json.data?.permalink_url ?? "",
+  };
+}
+
 /** Check whether a task still exists in Asana. Returns false on 404 (deleted). */
 export async function taskExists(taskGid: string): Promise<boolean> {
   const token = process.env.ASANA_ACCESS_TOKEN;
