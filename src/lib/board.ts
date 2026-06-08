@@ -36,6 +36,9 @@ export interface BoardCard {
   context?: string | null;
   createdAt?: string | null;
   detailsUrl?: string | null;
+  // Issue-specific detail fields.
+  priority?: number | null;
+  fromWhere?: string | null;
 }
 
 /** Synthetic "rock" that gathers rock-less to-dos. */
@@ -86,6 +89,10 @@ export function issueToCard(i: Issue): BoardCard {
     dueDate: null,
     owner: i.owner,
     rockId: ISSUE_GROUP_ID,
+    createdAt: i.createdAt,
+    detailsUrl: i.detailsUrl,
+    priority: i.priority,
+    fromWhere: i.fromWhere,
   };
 }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { BoardCard, CardKind } from "@/lib/board";
-import type { Issue, Owner, Rock } from "@/lib/bloom/types";
+import type { Owner, Rock } from "@/lib/bloom/types";
 
 type DetailKind = "todo" | "issue" | "rock" | "milestone";
 
@@ -44,11 +44,25 @@ export function detailFromCard(card: BoardCard, groupName: string): DetailItem {
     rows.push({ label: "Rock", value: groupName });
   }
   if (card.context) rows.push({ label: "Context", value: card.context });
+  if (card.kind === "issue") {
+    if (card.fromWhere) rows.push({ label: "From", value: card.fromWhere });
+    if (card.priority !== null && card.priority !== undefined) {
+      rows.push({ label: "Priority", value: String(card.priority) });
+    }
+  }
   const due = fmtDate(card.dueDate);
   if (due) rows.push({ label: "Due", value: due });
   const created = fmtDate(card.createdAt);
   if (created) rows.push({ label: "Created", value: created });
-  rows.push({ label: "Status", value: card.complete ? "Complete" : "Open" });
+  const statusValue =
+    card.kind === "issue"
+      ? card.complete
+        ? "Solved"
+        : "Open"
+      : card.complete
+        ? "Complete"
+        : "Open";
+  rows.push({ label: "Status", value: statusValue });
   return {
     id: card.id,
     detailKind: card.kind,
@@ -58,27 +72,6 @@ export function detailFromCard(card: BoardCard, groupName: string): DetailItem {
     owner: card.owner,
     rows,
     detailsUrl: card.detailsUrl,
-  };
-}
-
-export function detailFromIssue(issue: Issue): DetailItem {
-  const rows: DetailItem["rows"] = [];
-  if (issue.fromWhere) rows.push({ label: "From", value: issue.fromWhere });
-  if (issue.priority !== null && issue.priority !== undefined) {
-    rows.push({ label: "Priority", value: String(issue.priority) });
-  }
-  const created = fmtDate(issue.createdAt);
-  if (created) rows.push({ label: "Created", value: created });
-  rows.push({ label: "Status", value: issue.complete ? "Solved" : "Open" });
-  return {
-    id: issue.id,
-    detailKind: "issue",
-    title: issue.name,
-    kind: "issue",
-    complete: issue.complete,
-    owner: issue.owner,
-    rows,
-    detailsUrl: issue.detailsUrl,
   };
 }
 

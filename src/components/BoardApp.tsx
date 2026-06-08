@@ -4,16 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import Board from "./Board";
 import DetailDrawer, {
   detailFromCard,
-  detailFromIssue,
   detailFromRock,
   type DetailItem,
 } from "./DetailDrawer";
-import Header, { type AppView } from "./Header";
-import IssuesView from "./IssuesView";
+import Header from "./Header";
 import RockFilter from "./RockFilter";
 import { useBoard } from "@/hooks/useBloomData";
 import {
   columnFor,
+  issueToCard,
+  ISSUE_GROUP_ID,
+  ISSUE_GROUP_NAME,
   loadOverlay,
   milestoneToCard,
   saveOverlay,
@@ -28,7 +29,6 @@ import type { Rock } from "@/lib/bloom/types";
 export default function BoardApp({ userName }: { userName: string }) {
   const { data, error, isLoading, mutate } = useBoard();
 
-  const [view, setView] = useState<AppView>("board");
   const [overlay, setOverlay] = useState<Record<string, ColumnId>>({});
   const [activeRockIds, setActiveRockIds] = useState<Set<string> | null>(null);
   const [query, setQuery] = useState("");
@@ -40,29 +40,42 @@ export default function BoardApp({ userName }: { userName: string }) {
 
   const rocks: Rock[] = useMemo(() => data?.rocks ?? [], [data]);
 
-  // Board cards: milestones + to-dos only (issues have their own view)
+  // Board cards: milestones + to-dos + issues, unified.
   const cards: BoardCard[] = useMemo(() => {
     const ms = (data?.milestones ?? []).map(milestoneToCard);
     const td = (data?.todos ?? []).map(todoToCard);
-    return [...ms, ...td];
+    const is = (data?.issues ?? []).map(issueToCard);
+    return [...ms, ...td, ...is];
   }, [data]);
 
   const hasTodos = (data?.todos?.length ?? 0) > 0;
+  const hasIssues = (data?.issues?.length ?? 0) > 0;
 
+  // Synthetic groups (To-Dos, Issues) sit in the sidebar filter alongside rocks.
   const groups: Rock[] = useMemo(() => {
-    if (!hasTodos) return rocks;
-    return [
-      ...rocks,
-      {
+    const extras: Rock[] = [];
+    if (hasTodos) {
+      extras.push({
         id: TODO_GROUP_ID,
         name: TODO_GROUP_NAME,
-        status: "incomplete" as const,
+        status: "incomplete",
         dueDate: null,
         owner: null,
         completion: 0,
-      },
-    ];
-  }, [rocks, hasTodos]);
+      });
+    }
+    if (hasIssues) {
+      extras.push({
+        id: ISSUE_GROUP_ID,
+        name: ISSUE_GROUP_NAME,
+        status: "incomplete",
+        dueDate: null,
+        owner: null,
+        completion: 0,
+      });
+    }
+    return [...rocks, ...extras];
+  }, [rocks, hasTodos, hasIssues]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -84,7 +97,12 @@ export default function BoardApp({ userName }: { userName: string }) {
 
     const shouldComplete = target === "complete";
     if (shouldComplete !== card.complete) {
-      const listKey = card.kind === "todo" ? "todos" : "milestones";
+      const listKey =
+        card.kind === "todo"
+          ? "todos"
+          : card.kind === "issue"
+            ? "issues"
+            : "milestones";
       mutate(
         (prev) =>
           prev && {
@@ -99,7 +117,9 @@ export default function BoardApp({ userName }: { userName: string }) {
       const endpoint =
         card.kind === "todo"
           ? `/api/todos/${card.id}`
-          : `/api/milestones/${card.id}`;
+          : card.kind === "issue"
+            ? `/api/issues/${card.id}`
+            : `/api/milestones/${card.id}`;
       try {
         const res = await fetch(endpoint, {
           method: "PATCH",
@@ -116,68 +136,28 @@ export default function BoardApp({ userName }: { userName: string }) {
     }
   }
 
-  /** Toggle an issue's solved/open state — writes to Bloom optimistically. */
-  async function toggleIssue(id: string, complete: boolean) {
-    mutate(
-      (prev) =>
-        prev && {
-          ...prev,
-          issues: prev.issues.map((i) =>
-            i.id === id ? { ...i, complete } : i,
-          ),
-        },
-      { revalidate: false },
-    );
-
-    try {
-      const res = await fetch(`/api/issues/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ complete }),
-      });
-      if (!res.ok) throw new Error();
-    } catch {
-      mutate();
-    }
-  }
-
   const loading = isLoading;
-  const issues = data?.issues ?? [];
 
   return (
     <div className="flex h-screen flex-col bg-[#0f0f11]">
-      <Header
-        userName={userName}
-        query={query}
-        onQueryChange={setQuery}
-        view={view}
-        onViewChange={setView}
-      />
+      <Header userName={userName} query={query} onQueryChange={setQuery} />
 
       <div className="flex min-h-0 flex-1">
-        {view === "board" && (
-          <RockFilter
-            rocks={groups}
-            cards={cards}
-            activeRockIds={activeRockIds}
-            onChange={setActiveRockIds}
-            onOpenRock={(rock) =>
-              setDetail({ item: detailFromRock(rock), label: "Rock" })
-            }
-          />
-        )}
+        <RockFilter
+          rocks={groups}
+          cards={cards}
+          activeRockIds={activeRockIds}
+          onChange={setActiveRockIds}
+          onOpenRock={(rock) =>
+            setDetail({ item: detailFromRock(rock), label: "Rock" })
+          }
+        />
 
         <main className="min-w-0 flex-1 overflow-hidden p-4">
           {error ? (
             <ErrorState message={(error as Error).message} />
           ) : loading ? (
             <LoadingState />
-          ) : view === "issues" ? (
-            <IssuesView
-              issues={issues}
-              onToggle={toggleIssue}
-              onOpen={(issue) => setDetail({ item: detailFromIssue(issue) })}
-            />
           ) : cards.length === 0 ? (
             <EmptyState />
           ) : (
