@@ -143,6 +143,15 @@ export default function Card({
             </span>
           )}
 
+          {card.meeting && (
+            <span
+              className="max-w-[120px] truncate rounded bg-white/[0.04] px-1.5 py-0.5 font-medium text-zinc-500"
+              title={card.meeting}
+            >
+              {card.meeting}
+            </span>
+          )}
+
           {due && (
             <span
               className={`ml-auto rounded px-1.5 py-0.5 font-medium ${
