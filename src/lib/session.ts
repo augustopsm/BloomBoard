@@ -13,6 +13,8 @@ const SECRET = process.env.SESSION_SECRET ?? "dev-only-insecure-secret";
 export interface Session {
   token: string;
   userName: string;
+  /** Bloom user ID — stored at login to avoid extra round-trips. */
+  userId?: string;
   /** Epoch ms when the Bloom token expires. */
   expiresAt: number;
 }

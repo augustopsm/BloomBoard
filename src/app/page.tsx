@@ -5,5 +5,5 @@ import { getSession } from "@/lib/session";
 export default function HomePage() {
   const session = getSession();
   if (!session) redirect("/login");
-  return <BoardApp userName={session.userName} />;
+  return <BoardApp userName={session.userName} userId={session.userId ?? null} />;
 }

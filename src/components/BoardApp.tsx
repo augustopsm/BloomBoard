@@ -28,8 +28,15 @@ import {
 } from "@/lib/board";
 import type { Rock } from "@/lib/bloom/types";
 
-export default function BoardApp({ userName }: { userName: string }) {
-  const { data, error, isLoading, mutate } = useBoard();
+export default function BoardApp({
+  userName,
+  userId,
+}: {
+  userName: string;
+  userId: string | null;
+}) {
+  const [extraUserIds, setExtraUserIds] = useState<string[]>([]);
+  const { data, error, isLoading, mutate } = useBoard(extraUserIds);
 
   const [overlay, setOverlay] = useState<Record<string, ColumnId>>({});
   const [activeRockIds, setActiveRockIds] = useState<Set<string> | null>(null);
@@ -44,8 +51,6 @@ export default function BoardApp({ userName }: { userName: string }) {
 
   // Board cards: milestones + to-dos + issues, unified.
   const cards: BoardCard[] = useMemo(() => {
-    // Map a rock id to its meeting names, so milestones can inherit the
-    // meeting of their parent rock.
     const rockMeetings = new Map(
       (data?.rocks ?? []).map((r) => [r.id, (r.meetings ?? []).join(", ")]),
     );
@@ -66,7 +71,6 @@ export default function BoardApp({ userName }: { userName: string }) {
   const hasTodos = (data?.todos?.length ?? 0) > 0;
   const hasIssues = (data?.issues?.length ?? 0) > 0;
 
-  // Synthetic groups (To-Dos, Issues) sit in the sidebar filter alongside rocks.
   const groups: Rock[] = useMemo(() => {
     const extras: Rock[] = [];
     if (hasTodos) {
@@ -163,11 +167,19 @@ export default function BoardApp({ userName }: { userName: string }) {
     }
   }
 
-  const loading = isLoading;
-
   return (
     <div className="flex h-screen flex-col bg-[#0f0f11]">
-      <Header userName={userName} query={query} onQueryChange={setQuery} />
+      <Header
+        userName={userName}
+        userId={userId ?? ""}
+        query={query}
+        onQueryChange={setQuery}
+        extraUserIds={extraUserIds}
+        onExtraUsersChange={(ids) => {
+          setExtraUserIds(ids);
+          setActiveRockIds(null);
+        }}
+      />
 
       <div className="flex min-h-0 flex-1">
         <RockFilter
@@ -183,7 +195,7 @@ export default function BoardApp({ userName }: { userName: string }) {
         <main className="min-w-0 flex-1 overflow-hidden p-4">
           {error ? (
             <ErrorState message={(error as Error).message} />
-          ) : loading ? (
+          ) : isLoading ? (
             <LoadingState />
           ) : cards.length === 0 ? (
             <EmptyState />

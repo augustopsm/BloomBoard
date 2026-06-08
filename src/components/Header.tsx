@@ -1,15 +1,22 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import UserPicker from "./UserPicker";
 
 export default function Header({
   userName,
+  userId,
   query,
   onQueryChange,
+  extraUserIds,
+  onExtraUsersChange,
 }: {
   userName: string;
+  userId: string;
   query: string;
   onQueryChange: (v: string) => void;
+  extraUserIds: string[];
+  onExtraUsersChange: (ids: string[]) => void;
 }) {
   const router = useRouter();
 
@@ -41,6 +48,11 @@ export default function Header({
       </div>
 
       <div className="ml-auto flex items-center gap-3">
+        <UserPicker
+          currentUserId={userId}
+          selectedIds={extraUserIds}
+          onChange={onExtraUsersChange}
+        />
         <span className="hidden text-sm text-zinc-500 sm:inline">{userName}</span>
         <button
           onClick={logout}

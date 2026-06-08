@@ -3,8 +3,8 @@
 
 import { bloomFetch } from "./client";
 import { BLOOM_BASE_URL, endpoints } from "./endpoints";
-import { toArray, toIssue, toMilestone, toRock, toTodo } from "./transform";
-import type { Issue, Milestone, Rock, Todo } from "./types";
+import { toArray, toIssue, toMilestone, toOwner, toRock, toTodo } from "./transform";
+import type { Issue, Milestone, Rock, TeamMember, Todo } from "./types";
 
 export type DetailKind = "todo" | "issue" | "rock" | "milestone";
 
@@ -118,6 +118,72 @@ export async function setIssueComplete(
     method: "POST",
     body: JSON.stringify({ complete }),
   });
+}
+
+/**
+ * Load rocks + milestones for any user by their Bloom user ID.
+ * Reuses the same per-rock milestone fan-out as the "mine" version.
+ */
+export async function loadRocksAndMilestonesForUser(
+  token: string,
+  userId: string,
+): Promise<{ rocks: Rock[]; milestones: Milestone[] }> {
+  const rocks = toArray(await bloomFetch(token, endpoints.rocksForUser(userId))).map(toRock);
+
+  const milestonesByRock = await Promise.all(
+    rocks.map(async (rock) => {
+      const raw = toArray(
+        await bloomFetch(token, endpoints.milestonesForRock(rock.id)),
+      );
+      return raw
+        .map(toMilestone)
+        .map((m) => ({ ...m, rockId: m.rockId ?? rock.id }));
+    }),
+  );
+
+  rocks.forEach((rock, i) => {
+    const ms = milestonesByRock[i];
+    if (ms.length > 0) {
+      const done = ms.filter((m) => m.complete).length;
+      rock.completion = Math.round((done / ms.length) * 100);
+    }
+  });
+
+  return { rocks, milestones: milestonesByRock.flat() };
+}
+
+export async function getTodosForUser(token: string, userId: string): Promise<Todo[]> {
+  const data = await bloomFetch(token, endpoints.todosForUser(userId));
+  return toArray(data)
+    .filter((raw) => {
+      const t = raw.TodoType ?? raw.todoType;
+      return t !== 2 && String(t).toLowerCase() !== "milestone";
+    })
+    .map(toTodo);
+}
+
+export async function getIssuesForUser(token: string, userId: string): Promise<Issue[]> {
+  const data = await bloomFetch(token, endpoints.issuesForUser(userId));
+  return toArray(data).map(toIssue);
+}
+
+/**
+ * Fetch all attendees of an L10 meeting as TeamMembers.
+ * The meetingId is read from the BLOOM_MEETING_ID env var; falls back to a
+ * hardcoded default sourced from the debug probe (OriginId on todos).
+ */
+export async function getTeamMembers(token: string): Promise<TeamMember[]> {
+  const meetingId = process.env.BLOOM_MEETING_ID ?? "215896";
+  const data = await bloomFetch(token, endpoints.meetingAttendees(meetingId));
+  return toArray(data)
+    .map((raw) => {
+      const owner = toOwner(raw);
+      if (!owner) return null;
+      const member: TeamMember = { id: owner.id, name: owner.name };
+      if (owner.imageUrl) member.imageUrl = owner.imageUrl;
+      return member;
+    })
+    .filter((m): m is TeamMember => m !== null);
 }
 
 /**

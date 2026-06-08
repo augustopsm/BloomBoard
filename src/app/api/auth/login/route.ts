@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { BloomApiError, login } from "@/lib/bloom/client";
+import { BloomApiError, bloomFetch, login } from "@/lib/bloom/client";
+import { endpoints } from "@/lib/bloom/endpoints";
 import { setSession } from "@/lib/session";
 
 export async function POST(req: Request) {
@@ -19,12 +20,26 @@ export async function POST(req: Request) {
 
   try {
     const token = await login(email, password);
+
+    // Fetch the user's Bloom ID so the client can switch between team members.
+    let userId: string | undefined;
+    try {
+      const me = await bloomFetch<{ Id?: string; id?: string }>(
+        token.access_token,
+        endpoints.me,
+      );
+      userId = String(me?.Id ?? me?.id ?? "").trim() || undefined;
+    } catch {
+      // Non-fatal — multi-user picker just won't know which is "you".
+    }
+
     setSession({
       token: token.access_token,
       userName: token.userName ?? email,
+      userId,
       expiresAt: Date.now() + (token.expires_in ?? 0) * 1000,
     });
-    return NextResponse.json({ userName: token.userName ?? email });
+    return NextResponse.json({ userName: token.userName ?? email, userId });
   } catch (err) {
     if (err instanceof BloomApiError) {
       return NextResponse.json({ error: err.message }, { status: err.status });

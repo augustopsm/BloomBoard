@@ -68,6 +68,13 @@ export interface Issue {
   detailsUrl?: string | null;
 }
 
+/** A team member returned from the L10 attendees endpoint. */
+export interface TeamMember {
+  id: string;
+  name: string;
+  imageUrl?: string;
+}
+
 /** Shape returned by the Bloom `/token` endpoint. */
 export interface BloomToken {
   access_token: string;

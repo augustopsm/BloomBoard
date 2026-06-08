@@ -1,21 +1,37 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, requireSession } from "@/lib/api-helpers";
-import { getIssues, getTodos, loadRocksAndMilestones } from "@/lib/bloom/service";
+import {
+  getIssues,
+  getIssuesForUser,
+  getTodos,
+  getTodosForUser,
+  loadRocksAndMilestones,
+  loadRocksAndMilestonesForUser,
+} from "@/lib/bloom/service";
 import { asanaConfigured } from "@/lib/asana";
 import type { Issue, Todo } from "@/lib/bloom/types";
 
 // The board's single data source: rocks + milestones + to-dos + issues.
 // Rocks/milestones are essential; to-dos and issues are best-effort so a
 // failure in either doesn't blank the whole board.
-export async function GET() {
+// Optional ?userId= fetches data for a specific team member instead of "mine".
+export async function GET(req: NextRequest) {
   const session = requireSession();
   if (session instanceof NextResponse) return session;
 
+  const userId = new URL(req.url).searchParams.get("userId") ?? null;
+
   try {
     const [rm, td, is] = await Promise.allSettled([
-      loadRocksAndMilestones(session.token),
-      getTodos(session.token),
-      getIssues(session.token),
+      userId
+        ? loadRocksAndMilestonesForUser(session.token, userId)
+        : loadRocksAndMilestones(session.token),
+      userId
+        ? getTodosForUser(session.token, userId)
+        : getTodos(session.token),
+      userId
+        ? getIssuesForUser(session.token, userId)
+        : getIssues(session.token),
     ]);
 
     if (rm.status === "rejected") throw rm.reason;
